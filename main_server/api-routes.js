@@ -20,7 +20,7 @@ router.route('/users')
 router.route('/user/:phone')
   .get(user_controller.view)
   // .patch(user_controller.update)
-  // .put(user_controller.update)
+  .put(user_controller.update)
   .delete(user_controller.delete);
 
 // Export API routes

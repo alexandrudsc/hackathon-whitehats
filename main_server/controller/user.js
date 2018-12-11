@@ -20,7 +20,7 @@ exports.index = function(req, res) {
 
 // Handle create user actions
 exports.new = function(req, res) {
-  if( req.body.phone.length != 10){
+  if( !req.body.phone || req.body.phone.length != 10){
     return res.json({
       status: "error",
       message: "Incorrect phone number",
@@ -29,7 +29,9 @@ exports.new = function(req, res) {
   var user = new User();
   user.name = req.body.name ? req.body.name : user.name;
   user.email = req.body.email;
+  user.token = req.body.token;
   user._id = req.body.phone;
+  user.friends = req.body.friends ? req.body.friends : user.friends;
 
   // save the user and check for errors
   user.save(function(err) {
@@ -40,6 +42,7 @@ exports.new = function(req, res) {
       });
     }
     res.json({
+      status: 'success',
       message: 'New user created!',
       data: user
     });
@@ -53,6 +56,7 @@ exports.view = function(req, res) {
     if (err)
       res.send(err);
     res.json({
+      status: 'success',
       message: 'User details loading..',
       data: user
     });
@@ -60,37 +64,61 @@ exports.view = function(req, res) {
 };
 
 // Handle update user info
-// exports.update = function (req, res) {
-//
-//     Contact.findById(req.params.contact_id, function (err, contact) {
-//         if (err)
-//             res.send(err);
-//
-//         contact.name = req.body.name ? req.body.name : contact.name;
-//         contact.gender = req.body.gender;
-//         contact.email = req.body.email;
-//         contact.phone = req.body.phone;
-//
-//         // save the contact and check for errors
-//         contact.save(function (err) {
-//             if (err)
-//                 res.json(err);
-//             res.json({
-//                 message: 'Contact Info updated',
-//                 data: contact
-//             });
-//         });
-//     });
-// };
+exports.update = function (req, res) {
+
+    User.findById(req.params.phone, function (err, user) {
+        if (err){
+          res.send(err);
+          return;
+        }
+
+        if( !user ){
+          res.json({
+            status: 'error',
+            message: 'User not found'
+          })
+          return;
+        }
+
+        user.name = req.body.name ? req.body.name : user.name;
+        user.email = req.body.email;
+        user.token = req.body.token;
+        user._id = req.body.phone ? req.body.phone : user._id;
+        user.friends = req.body.friends ? req.body.friends : user.friends;
+
+    // save the contact and check for errors
+        user.save(function (err) {
+            if (err){
+              res.json(err);
+              return;
+            }
+            res.json({
+              status: 'success',
+              message: 'User Info updated',
+              data: contact
+            });
+        });
+    });
+};
 
 
 // Handle delete user
 exports.delete = function(req, res) {
-  User.remove({
+  User.deleteOne({
     _id: req.params.phone
-  }, function(err, contact) {
-    if (err)
+  }, function(err, user) {
+    if (err || !user){
       res.send(err);
+      return;
+    }
+
+    if(user.n < 1){
+      res.json({
+        status: "error",
+        message: 'user does not exist'
+      })
+      return;
+    }
 
     res.json({
       status: "success",

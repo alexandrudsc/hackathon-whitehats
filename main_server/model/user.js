@@ -11,10 +11,18 @@ var user_schema = mongoose.Schema({
     type: String,
     required: true
   },
+  token: {
+    type: String,
+    required: true
+  },
   reg_date: {
     type: Date,
     default: Date.now
-  }
+  },
+  friends: [{
+    _id: String,
+    name: String
+  }]
 });
 
 // Export Contact model
