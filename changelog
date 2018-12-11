@@ -1,0 +1,9 @@
+v0.1
+===============================================================================
+- [Feature][Server] Initial main server with mongodb and push notification
+- [Feature][Android] updated android app with register and receive push
+notification
+- [Feature][Alarm server] receive TCP socket messages. send HTTP requests to
+main Server
+===============================================================================
+
