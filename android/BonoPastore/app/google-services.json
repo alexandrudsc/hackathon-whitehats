@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "736655307515",
+    "firebase_url": "https://bonopastore.firebaseio.com",
+    "project_id": "bonopastore",
+    "storage_bucket": "bonopastore.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:736655307515:android:391c71ac281e2784",
+        "android_client_info": {
+          "package_name": "com.whitehats.bonopastore"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "736655307515-evild4s7rlp31i70ovfeg7q4bajvinha.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQalVXn99aWpaxXycac5w2GwXIJ-iITHc"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
