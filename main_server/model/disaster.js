@@ -1,8 +1,7 @@
 var mongoose = require('mongoose');
 
 // Setup schema
-var user_schema = mongoose.Schema({
-  _id: String,
+var disaster_schema = mongoose.Schema({
   name: {
     type: String,
     required: true
@@ -26,8 +25,9 @@ var user_schema = mongoose.Schema({
 });
 
 // Export Contact model
-var User = module.exports = mongoose.model('user', user_schema);
+var Disaster = module.exports = mongoose.model('disaster', disaster_schema);
+
 
 module.exports.get = function (callback, limit) {
-  User.find(callback).limit(limit);
+  Disaster.find(callback).limit(limit);
 }

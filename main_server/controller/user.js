@@ -53,8 +53,10 @@ exports.new = function(req, res) {
 // Handle view user info
 exports.view = function(req, res) {
   User.findById(req.params.phone, function(err, user) {
-    if (err)
+    if (err){
       res.send(err);
+      return;
+    }
     res.json({
       status: 'success',
       message: 'User details loading..',
@@ -126,3 +128,43 @@ exports.delete = function(req, res) {
     });
   });
 };
+
+//*** NON_DB controls ***//
+
+var admin = require("firebase-admin");
+
+var serviceAccount = require("../.bonopastore-firebase-adminsdk-n2vya-0f72757f69.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://bonopastore.firebaseio.com"
+});
+
+exports.notify = function(phone, msg) {
+  User.findById(phone, function(err, user) {
+    if(!user){
+      throw new Error("User not found");
+    }
+
+    var message = {
+      data: msg,
+      token: user.token
+    }
+
+    // Send a message to the device corresponding to the provided
+    // registration token.
+    try{
+      admin.messaging().send(message)
+        .then((response) => {
+          // Response is a message ID string.
+          console.log('Successfully sent message:', response);
+        })
+        .catch((error) => {
+          console.log('Error sending message:', error);
+        });
+    }
+    catch(er){
+      throw er;
+    }
+  });
+}

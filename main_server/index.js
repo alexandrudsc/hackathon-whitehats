@@ -35,36 +35,3 @@ app.use('/api', apiRoutes)
 app.listen(port, function () {
   console.log("Running RestHub on port " + port);
 });
-
-
-var admin = require("firebase-admin");
-
-var serviceAccount = require("./.bonopastore-firebase-adminsdk-n2vya-0f72757f69.json");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://bonopastore.firebaseio.com"
-});
-
-// This registration token comes from the client FCM SDKs.
-var registrationToken = 'YOUR_REGISTRATION_TOKEN';
-
-// See documentation on defining a message payload.
-var message = {
-  data: {
-    score: '850',
-    time: '2:45'
-  },
-  token: registrationToken
-};
-
-// Send a message to the device corresponding to the provided
-// registration token.
-// admin.messaging().send(message)
-//   .then((response) => {
-//     // Response is a message ID string.
-//     console.log('Successfully sent message:', response);
-//   })
-//   .catch((error) => {
-//     console.log('Error sending message:', error);
-//   });

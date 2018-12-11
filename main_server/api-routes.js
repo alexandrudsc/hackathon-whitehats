@@ -11,6 +11,7 @@ router.get('/', function (req, res) {
 
 // Import contact controller
 var user_controller = require('./controller/user');
+var disaster_controller = require('./controller/disaster');
 
 // Contact routes
 router.route('/users')
@@ -22,6 +23,9 @@ router.route('/user/:phone')
   // .patch(user_controller.update)
   .put(user_controller.update)
   .delete(user_controller.delete);
+
+router.route('/disaster')
+  .get(disaster_controller.index);
 
 // Export API routes
 module.exports = router;
