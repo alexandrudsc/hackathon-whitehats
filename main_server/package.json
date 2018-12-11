@@ -1,0 +1,23 @@
+{
+  "name": "main_server",
+  "version": "1.0.0",
+  "description": "Service that stores and notifies about natural disasters",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "natural",
+    "disaster",
+    "REST",
+    "api"
+  ],
+  "author": "Pamparau Sebastian",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "firebase-admin": "^6.3.0",
+    "mongoose": "^5.3.15"
+  }
+}
