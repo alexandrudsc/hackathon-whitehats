@@ -4,10 +4,17 @@ import android.util.Log
 
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.whitehats.bonopastore.main.MessageListener
+import kotlin.properties.Delegates
+
 
 class BonoFirebaseMessagingService : FirebaseMessagingService() {
 
-    var TAG = "BonoFirebaseMessagingService "
+    val TAG = "BonoFirebaseMessagingService "
+    companion object {
+        var messageListener: MessageListener? = null
+    }
+
 
     /**
      * Called if InstanceID token is updated. This may occur if the security of
@@ -24,7 +31,7 @@ class BonoFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun sendRegistrationToServer(token: String?) {
-        ServerConfig.hostname
+
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage?) {
@@ -38,12 +45,16 @@ class BonoFirebaseMessagingService : FirebaseMessagingService() {
         remoteMessage?.data?.isNotEmpty()?.let {
             Log.d(TAG, "Message data payload: " + remoteMessage.data)
 
+            // Handle message within 10 seconds
+            if (messageListener != null)
+            {
+                messageListener?.onMessageReceived(remoteMessage)
+            }
+
             if (/* Check if data needs to be processed by long running job */ true) {
                 // For long-running tasks (10 seconds or more) use Firebase Job Dispatcher.
                 //scheduleJob()
             } else {
-                // Handle message within 10 seconds
-                //handleNow()
             }
         }
 
