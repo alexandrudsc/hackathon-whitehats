@@ -83,7 +83,7 @@ exports.update = function (req, res) {
         user.name = req.body.name ? req.body.name : user.name;
         user.email = req.body.email;
         user.token = req.body.token;
-        user._id = req.body.phone ? req.body.phone : user._id;
+        //user._id = req.body.phone ? req.body.phone : user._id;
         user.friends = req.body.friends ? req.body.friends : user.friends;
 
     // save the contact and check for errors
@@ -95,7 +95,7 @@ exports.update = function (req, res) {
             res.json({
               status: 'success',
               message: 'User Info updated',
-              data: contact
+              data: user
             });
         });
     });
