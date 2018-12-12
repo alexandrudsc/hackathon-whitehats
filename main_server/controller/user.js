@@ -103,6 +103,105 @@ exports.update = function (req, res) {
     });
 };
 
+exports.append_friend = function (req, res) {
+  User.findById(req.params.phone, function (err, user) {
+    if (err){
+      res.send({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+
+    if( !user ){
+      res.json({
+        status: 'error',
+        message: 'User not found'
+      })
+      return;
+    }
+
+    if(req.body.friend){
+      user.friends.push({
+        _id: req.body.friend.phone,
+        name: req.body.friend.name
+      });
+    }
+    else {
+      res.json({
+        status: 'error',
+        message: 'Friend not given'
+      })
+      return;
+    }
+
+    user.save(function (err) {
+      if (err){
+        res.json(err);
+        return;
+      }
+      res.json({
+        status: 'success',
+        message: 'User friends added',
+        data: user
+      });
+    });
+  });
+};
+
+exports.get_friends = function(req, res) {
+  User.findById(req.params.phone, 'friends', function (err, friends) {
+    if (err){
+      res.json({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+    res.json({
+      status: 'success',
+      message: 'User friends loading..',
+      data: friends
+    });
+  })
+}
+
+exports.delete_friend = function(req, res) {
+  User.findById(req.params.phone, 'friends', function (err, friends) {
+    if (err){
+      res.json({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+    var index = friends.friends.findIndex(function(item, i){
+      return item._id === req.params.fphone;
+    });
+
+    if(index === -1){
+      res.json({
+        status: 'error',
+        message: 'Friend does not exist'
+      })
+      return;
+    }
+
+    friends.friends.splice(index, 1);
+
+    friends.save(function (err) {
+      if (err){
+        res.json(err);
+        return;
+      }
+      res.json({
+        status: 'success',
+        message: 'Friend deleted successfully',
+        data: friends.friends
+      });
+    });
+  })
+}
 
 // Handle delete user
 exports.delete = function(req, res) {

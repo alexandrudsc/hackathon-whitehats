@@ -20,9 +20,16 @@ router.route('/users')
 
 router.route('/user/:phone')
   .get(user_controller.view)
-  // .patch(user_controller.update)
+  // .patch(user_controller.append_friends)
   .put(user_controller.update)
   .delete(user_controller.delete);
+
+router.route('/user/:phone/friends')
+  .get(user_controller.get_friends)
+  .post(user_controller.append_friend);
+
+router.route('/user/:phone/friend/:fphone/:fname?')
+  .delete(user_controller.delete_friend);
 
 router.route('/disasters')
   .get(disaster_controller.index)
