@@ -24,8 +24,18 @@ router.route('/user/:phone')
   .put(user_controller.update)
   .delete(user_controller.delete);
 
-router.route('/disaster')
-  .get(disaster_controller.index);
+router.route('/disasters')
+  .get(disaster_controller.index)
+  .post(disaster_controller.new);
+
+router.route('/disaster/:mongoId([0-9a-f]{24})')
+  .get(disaster_controller.view)
+  .put(disaster_controller.update)
+  .delete(disaster_controller.delete);
+
+router.route('/disasters/:longitude(-?\\d+((.\\d+)?))/:latitude(-?\\d+((.\\d+)?))/:radius(\\d{1,4})')
+  .get(disaster_controller.in_radius);
+
 
 // Export API routes
 module.exports = router;

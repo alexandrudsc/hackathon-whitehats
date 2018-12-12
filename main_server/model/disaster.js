@@ -1,27 +1,52 @@
 var mongoose = require('mongoose');
 
+const point_schema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    default: 'Point'
+  },
+  coordinates: {
+    type: [Number],
+    required: true
+  }
+});
+
 // Setup schema
 var disaster_schema = mongoose.Schema({
-  name: {
+  title: {
     type: String,
     required: true
   },
-  email: {
+  description: String,
+  location: {
+    type: point_schema,
+    required: true
+  },
+  radius: {
+    type: Number,
+    default: 1
+  },
+  active: {
+    type: Boolean,
+    default: true
+  },
+  notifier: {
     type: String,
     required: true
   },
-  token: {
+  to_notify: {
     type: String,
-    required: true
+    enum: ['public', 'private', 'public+private'],
+    default: 'public'
   },
-  reg_date: {
+  start_time: {
     type: Date,
     default: Date.now
   },
-  friends: [{
-    _id: String,
-    name: String
-  }]
+  end_time: {
+    type: Date
+  }
 });
 
 // Export Contact model
