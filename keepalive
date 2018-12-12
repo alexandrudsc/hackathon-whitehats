@@ -1,10 +1,24 @@
 #!/usr/bin/python
 # Run example : " ./keepalive server.py & "
 from subprocess import Popen
+import smtplib
 import sys
+
+smtp = smtplib.SMTP('smtp.gmail.com:587')
+smtp.starttls()
+smtp.login("whitehatsosf@gmail.com","6caifrumosi")
 
 filename = sys.argv[1]
 while True:
+    #kill pid witch using port 9000
+    p = Popen("fuser -k 9000/tcp", shell=True)
+    p.wait()
+    #Send the mail
+    msg = filename + "is starting. Please check"
+    smtp.sendmail("whitehatsosf@gmail.com", "aduduman95@gmail.com", msg)
+    smtp.sendmail("whitehatsosf@gmail.com", "pamparau.sebastian@gmail.com", msg)
+    smtp.sendmail("whitehatsosf@gmail.com", "alexandru.dascalu94@gmail.com", msg)
+
     print("\nStarting " + filename)
     p = Popen("python " + filename, shell=True)
     p.wait()
