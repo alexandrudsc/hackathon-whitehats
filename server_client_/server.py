@@ -5,6 +5,8 @@ multithreadedServer.py acts as a standard TCP server, with multi-threaded integr
 client request it receives.
 """
 
+import requests
+import json
 from argparse import ArgumentParser
 from threading import Lock, Thread
 from socket import SO_REUSEADDR, SOCK_STREAM, socket, SOL_SOCKET, AF_INET
@@ -26,8 +28,8 @@ args = parser.parse_args()
 ########## DEFINE GLOBAL VARIABLES ##########
 #-------------------------------------------#
 
-counter = 0
-response_message = "Now serving, number: "
+counter = 1
+response_message = "Response no : "
 thread_lock = Lock()
 
 # Create a server TCP socket and allow address re-use
@@ -38,6 +40,9 @@ s.bind(('localhost', args.port))
 # Create a list in which threads will be stored in order to be joined later
 threads = []
 
+headers = {
+    'Content-type': 'application/json',
+}
 #---------------------------------------------------------#
 ########## THREADED CLIENT HANDLER CONSTRUCTION ###########
 #---------------------------------------------------------#
@@ -54,11 +59,58 @@ class ClientHandler(Thread):
 
     # Define the actions the thread will execute when called.
     def run(self):
-        global counter
-        self.socket.send(self.response_message + str(counter))
-        # Lock the changing of the shared counter value to prevent erratic multithread changing behavior
-        with self.lock:
-            counter += 1
+        print("--> User connect ( " + self.address + ":" + str(self.port) + " )")
+
+        data = self.socket.recv(1024)
+        
+        while data.strip() != "exit":
+            
+            try:
+                if "post" in data:
+                    data = data.replace("post", "")
+                    d = data.split()
+                    
+                    data_input = {"name":d[0],"email":d[1],"token":d[2],"phone":d[3],"friends":{"_id":d[4],"name":d[5]}}
+
+                    print data_input
+                    r = requests.post(url = "http://192.168.220.14:8080/api/users", headers = headers, data = json.dumps(data_input))
+                    print(r.content, r.status_code, r.reason)
+
+
+                elif "delete" in data:
+                    data = data.replace("delete","")
+                    
+                    data_input = data.strip()
+                    
+                    print data_input
+                    
+                    r = requests.delete(url = "http://192.168.220.14:8080/api/user/" + data_input) #, headers = headers, data = data_input)
+                    
+                    print(r.content, r.status_code, r.reason)
+
+
+                    
+                    
+                    
+                else:
+                    # if data is not received break
+                    print("--- From connected user ( " + self.address + ":" + str(self.port) + " ) : " + str(data))
+                    global counter
+                    self.socket.send(self.response_message + str(counter) + "\n")
+                    
+                    #content = urllib2.urlopen("http://www.python.org").read()
+                    #self.socket.send("Content = " + content)
+
+                    # Lock the changing of the shared counter value to prevent erratic multithread changing behavior
+                    with self.lock:
+                        counter += 1
+                
+                data = self.socket.recv(1024)
+                
+            except KeyboardInterrupt:
+                break
+
+        print("<-- User disconnect ( " + self.address + ":" + str(self.port) + " )")
         self.socket.close()
 
 #-----------------------------------------------#
@@ -84,3 +136,4 @@ while 1:
 # When server ends gracefully (through user keyboard interrupt), wait until remaining threads finish
 for item in threads:
     item.join()
+exit(0)
