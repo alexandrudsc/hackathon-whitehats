@@ -65,6 +65,27 @@ exports.view = function(req, res) {
   });
 };
 
+exports.search = function(req, res) {
+  User.find({'name' : new RegExp(req.params.name, 'i')},
+    '_id name', function(err, users) {
+    if (err){
+      res.send(err);
+      return;
+    }
+    if(users.n < 1){
+      return res.json({
+        status: 'error',
+        message: 'No users found'
+      })
+    }
+    res.json({
+      status: 'success',
+      message: 'Users loading..',
+      data: users
+    });
+  });
+}
+
 // Handle update user info
 exports.update = function (req, res) {
 

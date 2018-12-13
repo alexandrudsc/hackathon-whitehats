@@ -18,6 +18,9 @@ router.route('/users')
   .get(user_controller.index)
   .post(user_controller.new);
 
+router.route('/users/:name')
+  .get(user_controller.search);
+
 router.route('/user/:phone')
   .get(user_controller.view)
   .put(user_controller.update)
