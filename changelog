@@ -1,10 +1,25 @@
+v0.3
+===============================================================================
+  - [New] Isu web page for generating disasters
+  - [Feature][main_server] Search user by name
+  - [Addition][main_server] Users can have objects.
+  - [Addition] Store users last locations
+  - [Feature] Notify users near disasters
+  - [Feature] Notify friends of users that are in the radius of a disaster
+  - [Fix][main_server] Enable cors
+  - [Feature][main_server] Finishec CRUD for user friends
+  - [Change] Adding values for levels alert
+  - [Feature] Demo with embedded
+  - [Feature][Embedded] Demo with embedded
+===============================================================================
+
 v0.2
 ===============================================================================
 - [Feature][Server] Implement CRUD functionality
 - [Feature][Android] Adding gmaps
-- [Feature][Alarm server] 
+- [Feature][Alarm server]
   Support json + requests to main server.
-  Keepalive app 
+  Keepalive app
   Receive and send coordinates from android app to main server
 ===============================================================================
 
@@ -17,4 +32,3 @@ notification
 - [Feature][Alarm server] receive TCP socket messages. send HTTP requests to
 main Server
 ===============================================================================
-
