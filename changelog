@@ -1,3 +1,14 @@
+v0.2
+===============================================================================
+- [Feature][Server] Implement CRUD functionality
+- [Feature][Android] Adding gmaps
+- [Feature][Alarm server] 
+  Support json + requests to main server.
+  Keepalive app 
+  Receive and send coordinates from android app to main server
+===============================================================================
+
+
 v0.1
 ===============================================================================
 - [Feature][Server] Initial main server with mongodb and push notification
