@@ -42,7 +42,7 @@ class BonoLocationService: Service(), GoogleApiClient.ConnectionCallbacks,
     }
 
     override fun onLocationChanged(location: Location) {
-        Log.e(TAG, "onLocationChanged: $location")
+        Log.i(TAG, "onLocationChanged: $location")
         this.mLocation = location
         bonoLocationListener?.locationUpdated(location)
     }
@@ -96,13 +96,6 @@ class BonoLocationService: Service(), GoogleApiClient.ConnectionCallbacks,
         if (mGoogleApiClient != null) {
             mGoogleApiClient?.connect()
         }
-//        try {
-//            startLocationUpdates()
-//        } catch (ex: java.lang.SecurityException) {
-//            Log.i(TAG, "fail to request location update, ignore", ex)
-//        } catch (ex: IllegalArgumentException) {
-//            Log.d(TAG, "network provider does not exist, " + ex.message)
-//        }
     }
 
     override fun onDestroy() {
@@ -145,9 +138,9 @@ class BonoLocationService: Service(), GoogleApiClient.ConnectionCallbacks,
     companion object {
         val TAG = javaClass.name
         var bonoLocationListener: BonoLocationListener? = null
-        private val LOCATION_INTERVAL = 1000
-        private val LOCATION_DISTANCE = 10f
-        private val UPDATE_INTERVAL = (2 * 1000).toLong()  /* 10 secs */
-        private val FASTEST_INTERVAL: Long = 2 * 1000 /* 2 sec */
+        private const val LOCATION_INTERVAL = 1000
+        private const val LOCATION_DISTANCE = 10f
+        private const val UPDATE_INTERVAL = (2 * 1000).toLong()  /* 10 secs */
+        private const val FASTEST_INTERVAL: Long = 2 * 1000 /* 2 sec */
     }
 }

@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
 
     <application
             android:allowBackup="true"
@@ -38,6 +39,14 @@
                 android:name=".BonoLocationService"
                 android:enabled="true">
         </service>
+
+        <activity
+                android:name=".ScrollingActivity"
+                android:label="@string/title_activity_scrolling"
+                android:theme="@style/AppTheme.NoActionBar">
+        </activity>
+        <activity android:name=".FriendsActivity">
+        </activity>
     </application>
 
 </manifest>

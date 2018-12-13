@@ -1,16 +1,21 @@
 package com.whitehats.bonopastore
 
-
+import android.app.Activity
+import android.app.Instrumentation
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.database.Cursor
+import android.graphics.Color
+import android.graphics.Color.*
 import android.location.Location
-import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.ContactsContract
 import android.support.design.widget.NavigationView
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
@@ -31,13 +36,18 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapFragment
 import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.model.Circle
+import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.iid.FirebaseInstanceId
+import com.google.firebase.messaging.RemoteMessage
 import com.whitehats.bonopastore.main.MainView
 import com.whitehats.bonopastore.main.Presenter
 import com.whitehats.bonopastore.main.PresenterImpl
+import com.whitehats.bonopastore.model.Friend
 import com.whitehats.bonopastore.remote.RequestResponse
+import com.whitehats.bonopastore.remote.ServerConfig
 import com.whitehats.bonopastore.socketcom.Sender
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
@@ -51,33 +61,31 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
     var presenter: Presenter by Delegates.notNull()
     private var mMap: GoogleMap? = null
 
-    private val TAG = "MainActivity"
-
-    private var mLocationManager: LocationManager? = null
-
     private val DEFAULT_ZOOM: Float = 15F
     private var mLocationPermissionGranted = false
 
     private var user: User = User()
     private var serviceIntent : Intent? = null
 
-    override fun showNotification(message: String) {
+    private var meCircle: Circle? = null
+
+    override fun showNotification(message: RemoteMessage?) {
         val channel = NotificationChannel(CHANNEL_ID, channel_name, NotificationManager.IMPORTANCE_HIGH).apply {
             description = "Notification from firebase"
         }
 
         var mBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.notification_action_background)
+            .setSmallIcon(R.drawable.notify_panel_notification_icon_bg)
             .setContentTitle("Firebase message")
             .setContentText(message.toString())
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
-        val intent = Intent(this, MainActivity::class.java)
         val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         mNotificationManager.createNotificationChannel(channel)
-        mNotificationManager.notify("test",0, mBuilder.build())
+        val notification = mBuilder.build()
+        mNotificationManager.notify("test",10, notification)
 
         var v :Vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         // Vibrate for 500 milliseconds
@@ -85,18 +93,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
     }
 
     override fun updateLocation(location: Location) {
-        var msg = "Updated Location: Latitude " + location.longitude.toString() + location.longitude
-
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-        // The "which" argument contains the position of the selected item.
-
         // Add a marker for the selected place, with an info window
         // showing information about that place.
         var latLng: LatLng = LatLng(location.latitude, location.longitude)
 
         // Position the map's camera at the location of the marker.
-
-        mMap?.moveCamera( CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM))
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE)
             == PackageManager.PERMISSION_GRANTED)
         {
@@ -110,20 +111,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         }
         user.lastLocation = Pair(location.latitude, location.longitude)
         Sender.sendLocationMessage(user)
-//        circle : Circle = map.addCircle(CircleOptions()
-//        .center()
-//        .radius(10000)
-//        .strokeColor(Color.RED)
-//        .fillColor(Color.BLUE))
+        if (meCircle == null)
+        {
+            mMap?.moveCamera( CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM))
+            meCircle =  mMap?.addCircle(
+                CircleOptions()
+                    .center(latLng)
+                    .radius(100.0)
+                    .zIndex(1F)
+                    .fillColor(0x220000FF))
+        }
+
     }
 
     companion object {
-        val TAG = "MainActivity"
-        val CHANNEL_ID = "0"
-        val channel_name = "firebase"
-
-        val PERMISSIONS_PHONE_NUMBER = 2
-        val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 3
+        const val TAG = "MainActivity"
+        const val CHANNEL_ID = "10"
+        const val channel_name = "firebase"
+        const val PERMISSIONS_PHONE_NUMBER = 2
+        const val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 3
+        const val REQUEST_CODE_SELECT_FRIEND = 11
     }
 
     var token = ""
@@ -162,15 +169,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
                 // Log and toast
                 //val msg = getString(R.string.msg_token_fmt, token)
                 Log.d(MainActivity.TAG, token)
-                Toast.makeText(this@MainActivity, token, Toast.LENGTH_SHORT).show()
+                //Toast.makeText(this@MainActivity, token, Toast.LENGTH_SHORT).show()
             })
 
-        mLocationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         var mapFragment: MapFragment  = fragmentManager.findFragmentById(R.id.map_fragment) as MapFragment
         mapFragment.getMapAsync(this)
 
         serviceIntent = Intent(this, BonoLocationService::class.java)
         startService(serviceIntent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        user.name = get_username()
     }
 
     override fun onBackPressed() {
@@ -224,12 +235,47 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         return true
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            REQUEST_CODE_SELECT_FRIEND -> {
+                if (resultCode == Activity.RESULT_OK)
+                {
+                    var friend: Friend = data?.extras!!["FRIEND_EXTRA"] as Friend
+                    addFriend(friend)
+                }
+            }
+        }
+    }
+
+    private fun addFriend(friend: Friend) {
+
+        Log.d(TAG, friend.username + " " + friend.user_id)
+        var json = JSONObject()
+        var jsonFriend = JSONObject()
+
+        jsonFriend.put("name", friend.username)
+        jsonFriend.put("phone", friend.user_id)
+        json.put("friend", jsonFriend)
+        val url = ServerConfig.hostname + ":" + ServerConfig.port + "/" + ServerConfig.API_ADD_FRIEND + "/" +
+                user.simNumber + "/friends"
+        RequestResponse.sendJSONRequest(this, this, this, json, url);
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         stopService(serviceIntent)
     }
 
-    fun onBtnRegisterClick(btnRegister :View) {
+    fun onBtnAddFriendsClick(btnAddFriends :MenuItem) {
+        var intent = Intent(this, FriendsActivity::class.java)
+        startActivityForResult(intent, REQUEST_CODE_SELECT_FRIEND)
+    }
+
+    fun onBtnAddObjectsClick(btnAddFriends :MenuItem) {
+    }
+
+    fun onBtnRegisterClick(btnRegister :MenuItem) {
         if (token == "") {
             return
         }
@@ -257,7 +303,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
                 simNumber = tm.subscriberId
             }
             //json.put("name", applicationContext.getString(R.id.nav_header_title));
-            json.put("name", "Alex Dascalu");
+            json.put("name", user.name)
             json.put("phone", simNumber)
             json.put("email", "alex@gmail.com")
             json.put("token", token)
@@ -265,6 +311,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
             RequestResponse.sendJSONRequest(this, this, this, json)
         }
 
+    }
+
+    private fun get_username(): String {
+        var name : String = ""
+        if (Build.MODEL == "SM-G950U1") {
+            name = "Alexandru Duduman"
+        } else if (Build.MODEL == "Nexus 5X") {
+            name = "Alexandru Dascalu"
+        } else {
+            name = "Sebastian Pamparau"
+        }
+        return name
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -286,7 +344,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
                         {
                             simNumber = tm.subscriberId
                         }
-                        json.put("name", "Alex Dascalu")
+                        json.put("name", user.name)
                         json.put("phone", simNumber)
                         json.put("email", "alex@gmail.com")
                         json.put("token", token)
@@ -317,15 +375,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
 
 
     override fun onResponse(response: JSONObject?) {
-
+        Log.d(TAG, response.toString())
     }
 
     override fun onErrorResponse(error: VolleyError?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        Log.e(TAG, error.toString())
     }
 
     override fun onMapReady(googleMap: GoogleMap?) {
         mMap = googleMap
+        RequestResponse.sendGetRequest(this, this, this,
+            ServerConfig.API_GET_DISASTERS)
         updateLocationUI()
     }
 

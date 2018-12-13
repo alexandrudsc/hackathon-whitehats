@@ -10,6 +10,7 @@ import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.Response.ErrorListener
 import com.android.volley.Response.Listener
+import com.android.volley.toolbox.StringRequest
 
 import org.json.JSONObject
 
@@ -32,5 +33,35 @@ class RequestResponse {
             // Add the request to the RequestQueue.
             queue.add(jsonObjectRequest)
         }
+
+        fun sendJSONRequest(service: Activity, listener: Response.Listener<JSONObject>, errorListener: ErrorListener,
+                            json: JSONObject, url: String) {
+            // Instantiate the RequestQueue.
+            val queue = Volley.newRequestQueue(service)
+
+            val jsonObjectRequest = JsonObjectRequest(Request.Method.POST, url, json,
+                listener, errorListener
+            )
+
+            // Add the request to the RequestQueue.
+            queue.add(jsonObjectRequest)
+        }
+
+        fun sendGetRequest(service: Activity, listener: Response.Listener<JSONObject>, errorListener: ErrorListener,
+                           requestStr: String)
+        {
+            // Instantiate the RequestQueue.
+            val queue = Volley.newRequestQueue(service)
+            val url = ServerConfig.hostname + ":" + ServerConfig.port + "/" + requestStr
+            val request = JsonObjectRequest(Request.Method.GET, url, null,
+                listener, errorListener
+            )
+
+            // Add the request to the RequestQueue.
+            queue.add(request)
+        }
+
+        //fun parseResponseDisasters()
+
     }
 }

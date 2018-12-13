@@ -18,6 +18,6 @@ class PresenterImpl(mainView: MainView) : Presenter {
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage?) {
-        view.showNotification(remoteMessage.toString())
+        view.showNotification(remoteMessage)
     }
 }
