@@ -3,7 +3,7 @@
           package="com.whitehats.bonopastore">
 
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
 
     <application
@@ -26,15 +26,21 @@
 
         <service android:name=".BonoFirebaseMessagingService">
             <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
             </intent-filter>
         </service>
 
-        <meta-data android:name="com.google.android.maps.v2.API_KEY"
-                   android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/>
+        <meta-data
+                android:name="com.google.android.maps.v2.API_KEY"
+                android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/>
 
-        <!--<meta-data android:name="com.google.android.geo.API_KEY"-->
-                   <!--android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/>-->
+        <!-- <meta-data android:name="com.google.android.geo.API_KEY" -->
+        <!-- android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/> -->
+        <service
+                android:name=".BonoLocationService"
+                android:enabled="true"
+                android:exported="true">
+        </service>
     </application>
 
 </manifest>

@@ -7,8 +7,4 @@ class ServerConfig {
         val port = "8080"
         val API_ADD_USER = "api/users"
     }
-
-
-
-
 }

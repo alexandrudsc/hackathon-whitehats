@@ -1,67 +1,55 @@
 package com.whitehats.bonopastore
 
+
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
-import android.support.design.widget.Snackbar
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.support.design.widget.NavigationView
+import android.support.design.widget.Snackbar
+import android.support.v4.app.ActivityCompat
+import android.support.v4.app.NotificationCompat
+import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
+import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.app_bar_main.*
-import android.widget.Toast
-import android.support.v4.app.NotificationCompat
-import android.support.v4.app.ActivityCompat
-import android.support.v4.content.ContextCompat
-import android.content.pm.PackageManager
-import android.telephony.TelephonyManager
-import android.app.NotificationChannel
-
-import android.content.Context
-
 import android.view.View
+import android.widget.Toast
 import com.android.volley.Response
 import com.android.volley.VolleyError
-
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.MapFragment
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.OnCompleteListener
+import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.iid.FirebaseInstanceId
 import com.whitehats.bonopastore.main.MainView
 import com.whitehats.bonopastore.main.Presenter
 import com.whitehats.bonopastore.main.PresenterImpl
+import com.whitehats.bonopastore.remote.RequestResponse
+import com.whitehats.bonopastore.socketcom.Sender
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.app_bar_main.*
 import org.json.JSONObject
 import kotlin.properties.Delegates
-import android.app.NotificationManager
-import android.content.DialogInterface
-import android.content.Intent
-import android.graphics.Color
-import android.location.Location
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.location.FusedLocationProviderClient
-
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.tasks.OnSuccessListener
-
-import com.google.android.gms.location.places.GeoDataClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.places.PlaceDetectionClient
-import com.google.android.gms.common.api.GoogleApiClient
-import com.google.android.gms.location.LocationRequest
-import android.location.LocationManager
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.provider.Settings
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.MapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
-
-
-import com.whitehats.bonopastore.remote.RequestResponse
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener,
     GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
@@ -79,11 +67,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
     private val listener: com.google.android.gms.location.LocationListener? = null
 
     private val UPDATE_INTERVAL = (2 * 1000).toLong()  /* 10 secs */
-    private val FASTEST_INTERVAL: Long = 2000 /* 2 sec */
+    private val FASTEST_INTERVAL: Long = 2 * 1000 /* 2 sec */
     private val DEFAULT_ZOOM: Float = 15F
 
     private var mLocationPermissionGranted = false
 
+    private var user: User = User()
 
     override fun showNotification(message: String) {
         val channel = NotificationChannel(CHANNEL_ID, channel_name, NotificationManager.IMPORTANCE_HIGH).apply {
@@ -108,6 +97,39 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
         v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
+    override fun updateLocation(location: Location) {
+        var msg = "Updated Location: Latitude " + location.longitude.toString() + location.longitude
+
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        // The "which" argument contains the position of the selected item.
+
+        // Add a marker for the selected place, with an info window
+        // showing information about that place.
+        var latLng: LatLng = LatLng(location.latitude, location.longitude)
+
+        // Position the map's camera at the location of the marker.
+
+        mMap?.moveCamera( CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM))
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE)
+            == PackageManager.PERMISSION_GRANTED)
+        {
+            val tm = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            var simNumber = tm.line1Number
+            if (simNumber == "")
+            {
+                simNumber = tm.subscriberId
+            }
+            user.simNumber = simNumber
+        }
+        user.lastLocation = Pair(location.latitude, location.longitude)
+        Sender.sendLocationMessage(user)
+//        circle : Circle = map.addCircle(CircleOptions()
+//        .center()
+//        .radius(10000)
+//        .strokeColor(Color.RED)
+//        .fillColor(Color.BLUE))
+    }
+
     companion object {
         val TAG = "MainActivity"
         val CHANNEL_ID = "0"
@@ -125,7 +147,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
         setSupportActionBar(toolbar)
         presenter = PresenterImpl(this)
         BonoFirebaseMessagingService.messageListener = presenter
-
 
 
         fab.setOnClickListener { view ->
@@ -261,10 +282,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
             {
                 simNumber = tm.subscriberId
             }
-            json.put("name", "Alex Dascalu")
+            //json.put("name", applicationContext.getString(R.id.nav_header_title));
+            json.put("name", "Alex Dascalu");
             json.put("phone", simNumber)
             json.put("email", "alex@gmail.com")
             json.put("token", token)
+            user.simNumber = simNumber
             RequestResponse.sendJSONRequest(this, this, this, json)
         }
 
@@ -293,6 +316,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
                         json.put("phone", simNumber)
                         json.put("email", "alex@gmail.com")
                         json.put("token", token)
+                        user.simNumber = simNumber
                         RequestResponse.sendJSONRequest(this, this, this, json)
                     }
                 } else {
@@ -382,27 +406,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
     }
 
     override fun onLocationChanged(location: Location) {
-        var msg = "Updated Location: Latitude " + location.longitude.toString() + location.longitude
-
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                    // The "which" argument contains the position of the selected item.
-
-            // Add a marker for the selected place, with an info window
-            // showing information about that place.
-        var latLng: LatLng = LatLng(location.latitude, location.longitude)
-        mMap?.addMarker(MarkerOptions()
-            .title("You are here")
-            .position(latLng))
-
-        // Position the map's camera at the location of the marker.
-
-        mMap?.moveCamera( CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM))
-//        circle : Circle = map.addCircle(CircleOptions()
-//        .center()
-//        .radius(10000)
-//        .strokeColor(Color.RED)
-//        .fillColor(Color.BLUE))
-
+        updateLocation(location);
     }
 
     override fun onConnectionFailed(connectionResult: ConnectionResult) {
