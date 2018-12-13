@@ -20,7 +20,7 @@ exports.index = function(req, res) {
 
 // Handle create user actions
 exports.new = function(req, res) {
-  if( !req.body.phone || req.body.phone.length != 10){
+  if( !req.body.phone || req.body.phone.length != 15){
     return res.json({
       status: "error",
       message: "Incorrect phone number",
@@ -203,6 +203,81 @@ exports.delete_friend = function(req, res) {
   })
 }
 
+
+exports.get_locations = function(req, res) {
+  User.findById(req.params.phone, 'last_locations', function (err, l) {
+    if (err){
+      res.json({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+    if( !l ){
+      res.json({
+        status: 'error',
+        message: 'User not found'
+      })
+      return;
+    }
+    res.json({
+      status: 'success',
+      message: 'Loading locations...',
+      data: l.last_locations
+    });
+  })
+}
+
+exports.add_location = function (req, res) {
+  User.findById(req.params.phone, 'last_locations', function (err, ll) {
+    if (err){
+      res.send({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+
+    if( !ll ){
+      res.json({
+        status: 'error',
+        message: 'User not found'
+      })
+      return;
+    }
+
+    if(req.body.location){
+      ll.last_locations.unshift({
+        coordinates: req.body.location.coordinates
+      });
+      var maxl = 5;
+      if(ll.last_locations.length > maxl){
+        ll.last_locations.splice(maxl, ll.last_locations.length - maxl)
+      }
+    }
+    else {
+      res.json({
+        status: 'error',
+        message: 'Location not given'
+      })
+      return;
+    }
+
+    ll.save(function (err) {
+      if (err){
+        res.json(err);
+        return;
+      }
+      res.json({
+        status: 'success',
+        message: 'Location added',
+        data: ll
+      });
+    });
+  });
+};
+
+
 // Handle delete user
 exports.delete = function(req, res) {
   User.deleteOne({
@@ -228,6 +303,106 @@ exports.delete = function(req, res) {
   });
 };
 
+exports.add_object = function (req, res) {
+  User.findById(req.params.phone, function (err, user) {
+    if (err){
+      res.send({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+
+    if( !user ){
+      res.json({
+        status: 'error',
+        message: 'User not found'
+      })
+      return;
+    }
+
+    if(req.body.object){
+      user.objects.push({
+        _id: req.body.object.phone,
+        name: req.body.object.name
+      });
+    }
+    else {
+      res.json({
+        status: 'error',
+        message: 'Object not given'
+      })
+      return;
+    }
+
+    user.save(function (err) {
+      if (err){
+        res.json(err);
+        return;
+      }
+      res.json({
+        status: 'success',
+        message: 'User object added',
+        data: user
+      });
+    });
+  });
+};
+
+exports.get_objects = function(req, res) {
+  User.findById(req.params.phone, 'objects', function (err, objects) {
+    if (err){
+      res.json({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+    res.json({
+      status: 'success',
+      message: 'User objects loading..',
+      data: objects
+    });
+  })
+}
+
+exports.delete_object = function(req, res) {
+  User.findById(req.params.phone, 'objects', function (err, objects) {
+    if (err){
+      res.json({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+    var index = objects.objects.findIndex(function(item, i){
+      return item._id === req.params.ophone;
+    });
+
+    if(index === -1){
+      res.json({
+        status: 'error',
+        message: 'Object does not exist'
+      })
+      return;
+    }
+
+    objects.objects.splice(index, 1);
+
+    objects.save(function (err) {
+      if (err){
+        res.json(err);
+        return;
+      }
+      res.json({
+        status: 'success',
+        message: 'Object deleted successfully',
+        data: objects.objects
+      });
+    });
+  })
+}
+
 //*** NON_DB controls ***//
 
 var admin = require("firebase-admin");
@@ -239,19 +414,20 @@ admin.initializeApp({
   databaseURL: "https://bonopastore.firebaseio.com"
 });
 
-exports.notify = function(phone, msg) {
+function notify(phone, msg) {
   User.findById(phone, function(err, user) {
     if(!user){
       throw new Error("User not found");
     }
 
     var message = {
-      data: msg,
+      data: { msg: msg },
       token: user.token
     }
 
     // Send a message to the device corresponding to the provided
     // registration token.
+    console.log(message);
     try{
       admin.messaging().send(message)
         .then((response) => {
@@ -263,7 +439,77 @@ exports.notify = function(phone, msg) {
         });
     }
     catch(er){
-      throw er;
+      console.log(`There was an error sending message to ${user.name}(${user._id})`)
     }
   });
 }
+
+exports.notify = notify;
+
+function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
+  User.find({
+    last_locations: {
+      $geoWithin: {
+        $centerSphere: [[lng, lat], rad / 6378.13]
+      }
+    }
+  }, function(err, users) {
+    if (err){
+      console.log({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+    // console.log({
+    //   status: 'success',
+    //   message: `Loading ${users.length} users within ${rad} meters from the specified location`,
+    //   data: users
+    // });
+    // console.log(users);
+    // return;
+    if(notify_friends){
+      users.forEach(function(item, index){
+        notify(item._id, msg);
+        var message = `${item.name} is caught in a disaster: "${msg}"`;
+        notify_friends(item, message);
+      })
+    } else {
+      users.forEach(function(item, index){
+        notify(item._id, msg)
+      })
+    }
+  });
+}
+
+exports.notify_all_in_radius = notify_all_in_radius;
+
+function notify_friends(user, msg){
+  user.friends.forEach(function(item, index){
+    notify(item._id, msg);
+  })
+}
+
+function notify_owners(disaster){
+  User.find({
+    objects: { _id: disaster.notifier }
+  }, function(err, users) {
+      if (err){
+        console.log({
+          status: 'error',
+          message: err
+        });
+        return;
+      }
+      if( users.n < 1 ){
+        console.log(`No owner for object ${disaster.notifier} found`)
+        return;
+      }
+      var msg = `Your object ${disaster.notifier} notified a disaster: ${disaster.title} - ${disaster.description}`;
+      users.forEach(function(item, index){
+        notify(item._id, msg);
+      })
+  });
+}
+
+exports.notify_owners = notify_owners;

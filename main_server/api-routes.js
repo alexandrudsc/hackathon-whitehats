@@ -20,7 +20,6 @@ router.route('/users')
 
 router.route('/user/:phone')
   .get(user_controller.view)
-  // .patch(user_controller.append_friends)
   .put(user_controller.update)
   .delete(user_controller.delete);
 
@@ -31,16 +30,34 @@ router.route('/user/:phone/friends')
 router.route('/user/:phone/friend/:fphone/:fname?')
   .delete(user_controller.delete_friend);
 
+router.route('/user/:phone/objects')
+  .get(user_controller.get_objects)
+  .post(user_controller.add_object);
+
+router.route('/user/:phone/object/:ophone/:oname?')
+  .delete(user_controller.delete_object);
+
+router.route('/user/:phone/locations')
+  .get(user_controller.get_locations)
+  .post(user_controller.add_location);
+
 router.route('/disasters')
   .get(disaster_controller.index)
-  .post(disaster_controller.new);
+  .post(disaster_controller.new)
+  .delete(disaster_controller.delete_all);
 
 router.route('/disaster/:mongoId([0-9a-f]{24})')
   .get(disaster_controller.view)
   .put(disaster_controller.update)
   .delete(disaster_controller.delete);
 
-router.route('/disasters/:longitude(-?\\d+((.\\d+)?))/:latitude(-?\\d+((.\\d+)?))/:radius(\\d{1,4})')
+router.route('/disaster/:mongoId([0-9a-f]{24})/disable')
+  .put(disaster_controller.disable);
+
+router.route('/disaster/:mongoId([0-9a-f]{24})/enable')
+  .put(disaster_controller.enable);
+
+router.route('/disasters/:longitude(-?\\d+((.\\d+)?))/:latitude(-?\\d+((.\\d+)?))/:radius(\\d{1,5})')
   .get(disaster_controller.in_radius);
 
 

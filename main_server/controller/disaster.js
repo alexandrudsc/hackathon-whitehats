@@ -9,6 +9,7 @@ exports.index = function(req, res) {
         message: err,
       });
     }
+    //notify("1","1");
     res.json({
       status: "success",
       message: "Disasters retrieved successfully",
@@ -40,6 +41,8 @@ exports.new = function(req, res) {
   disaster.radius = cnt.radius ? cnt.radius : disaster.radius;
   disaster.to_notify = cnt.to_notify ? cnt.to_notify : disaster.to_notify;
   disaster.end_time = cnt.end_time ? cnt.end_time : disaster.end_time;
+  disaster.level = cnt.level ? cnt.level : disaster.level;
+
 
   // save the disaster and check for errors
   disaster.save(function(err) {
@@ -48,6 +51,17 @@ exports.new = function(req, res) {
         status: "error",
         message: err,
       });
+    }
+    var d = disaster;
+    if( d.to_notify === 'public' || d.to_notify === 'public+private' ){
+      var message = `${d.notifier} issued "${d.title}" in your proximity`;
+      User.notify_all_in_radius(d.location.coordinates[0],
+                                d.location.coordinates[1],
+                                20000,
+                                message,
+                                true);
+    } else { //disaster comes from an object
+      User.notify_owners(disaster);
     }
     res.json({
       status: 'success',
@@ -82,6 +96,7 @@ exports.update = function(req, res) {
     disaster.radius = cnt.radius ? cnt.radius : disaster.radius;
     disaster.to_notify = cnt.to_notify ? cnt.to_notify : disaster.to_notify;
     disaster.end_time = cnt.end_time ? cnt.end_time : disaster.end_time;
+    disaster.level = cnt.level ? cnt.level : disaster.level;
 
     disaster.save(function(err) {
       if (err) {
@@ -150,6 +165,82 @@ exports.delete = function(req, res) {
   });
 };
 
+exports.disable = function(req, res) {
+  Disaster.findById(req.params.mongoId, function(err, disaster) {
+    if (err){
+      res.send(err);
+      return;
+    }
+    if (!disaster){
+      res.json({
+        status: 'error',
+        message: 'Disaster does not exist'
+      });
+      return;
+    }
+    disaster.active = false;
+
+    disaster.save(function(err) {
+      if (err) {
+        return res.json({
+          status: "error",
+          message: err,
+        });
+      }
+      res.json({
+        status: 'success',
+        message: 'Disaster disabled!',
+        data: disaster
+      });
+    });
+  });
+}
+
+exports.enable = function(req, res) {
+  Disaster.findById(req.params.mongoId, function(err, disaster) {
+    if (err){
+      res.send(err);
+      return;
+    }
+    if (!disaster){
+      res.json({
+        status: 'error',
+        message: 'Disaster does not exist'
+      });
+      return;
+    }
+    disaster.active = true;
+
+    disaster.save(function(err) {
+      if (err) {
+        return res.json({
+          status: "error",
+          message: err,
+        });
+      }
+      res.json({
+        status: 'success',
+        message: 'Disaster marked as active!',
+        data: disaster
+      });
+    });
+  });
+}
+
+exports.delete_all = function(req, res) {
+  Disaster.deleteMany({}, function(err, disaster) {
+    if (err){
+      res.send(err);
+      return;
+    }
+    res.json({
+      status: 'success',
+      message: 'All disasters have been removed!',
+      data: disaster
+    });
+  });
+}
+
 exports.in_radius = function(req, res) {
   var lng = req.params.longitude;
   var ltd = req.params.latitude;
@@ -181,7 +272,7 @@ exports.in_radius = function(req, res) {
 
 function notify(phone, msg){
   try{
-    User.notify('0123456789', { msg: 'Acesta este un test'});
+    User.notify('226103001845682', { msg: 'Acesta este un test'});
     return ({
       status: "success",
       message: "Am trimis notificarea"

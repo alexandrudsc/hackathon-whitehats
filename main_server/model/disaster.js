@@ -46,6 +46,10 @@ var disaster_schema = mongoose.Schema({
   },
   end_time: {
     type: Date
+  },
+  level: {
+    type: Number,
+    default: 1
   }
 });
 

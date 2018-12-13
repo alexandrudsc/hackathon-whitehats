@@ -1,5 +1,21 @@
 var mongoose = require('mongoose');
 
+const point_schema_time = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    default: 'Point'
+  },
+  coordinates: {
+    type: [Number],
+    required: true
+  },
+  time: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 // Setup schema
 var user_schema = mongoose.Schema({
   _id: String,
@@ -22,7 +38,14 @@ var user_schema = mongoose.Schema({
   friends: [{
     _id: String,
     name: String
-  }]
+  }],
+  objects: [{
+    _id: String,
+    name: String
+  }],
+  last_locations: {
+    type: [point_schema_time]
+  }
 });
 
 // Export Contact model
