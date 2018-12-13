@@ -1,4 +1,4 @@
 package com.whitehats.bonopastore.main
 
-interface Presenter : MessageListener {
+interface Presenter : MessageListener, BonoLocationListener {
 }

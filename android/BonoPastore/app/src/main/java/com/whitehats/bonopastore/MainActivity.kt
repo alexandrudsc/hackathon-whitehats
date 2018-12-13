@@ -1,7 +1,6 @@
 package com.whitehats.bonopastore
 
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -28,18 +27,12 @@ import android.view.View
 import android.widget.Toast
 import com.android.volley.Response
 import com.android.volley.VolleyError
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.api.GoogleApiClient
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapFragment
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.OnCompleteListener
-import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.iid.FirebaseInstanceId
 import com.whitehats.bonopastore.main.MainView
 import com.whitehats.bonopastore.main.Presenter
@@ -51,28 +44,22 @@ import kotlinx.android.synthetic.main.app_bar_main.*
 import org.json.JSONObject
 import kotlin.properties.Delegates
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnNavigationItemSelectedListener,
-    GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-    com.google.android.gms.location.LocationListener,
+class MainActivity : AppCompatActivity(), OnMapReadyCallback,
+    NavigationView.OnNavigationItemSelectedListener,
     Response.Listener<JSONObject>, Response.ErrorListener, MainView {
 
     var presenter: Presenter by Delegates.notNull()
     private var mMap: GoogleMap? = null
 
     private val TAG = "MainActivity"
-    private lateinit var mGoogleApiClient: GoogleApiClient
+
     private var mLocationManager: LocationManager? = null
-    lateinit var mLocation: Location
-    private var mLocationRequest: LocationRequest? = null
-    private val listener: com.google.android.gms.location.LocationListener? = null
 
-    private val UPDATE_INTERVAL = (2 * 1000).toLong()  /* 10 secs */
-    private val FASTEST_INTERVAL: Long = 2 * 1000 /* 2 sec */
     private val DEFAULT_ZOOM: Float = 15F
-
     private var mLocationPermissionGranted = false
 
     private var user: User = User()
+    private var serviceIntent : Intent? = null
 
     override fun showNotification(message: String) {
         val channel = NotificationChannel(CHANNEL_ID, channel_name, NotificationManager.IMPORTANCE_HIGH).apply {
@@ -147,6 +134,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
         setSupportActionBar(toolbar)
         presenter = PresenterImpl(this)
         BonoFirebaseMessagingService.messageListener = presenter
+        BonoLocationService.bonoLocationListener = presenter
 
 
         fab.setOnClickListener { view ->
@@ -177,31 +165,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
                 Toast.makeText(this@MainActivity, token, Toast.LENGTH_SHORT).show()
             })
 
-        mGoogleApiClient = GoogleApiClient.Builder(this)
-            .addConnectionCallbacks(this)
-            .addOnConnectionFailedListener(this)
-            .addApi(LocationServices.API)
-            .build()
-
         mLocationManager = this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         var mapFragment: MapFragment  = fragmentManager.findFragmentById(R.id.map_fragment) as MapFragment
         mapFragment.getMapAsync(this)
 
-    }
-
-
-    override fun onStart() {
-        super.onStart();
-        if (mGoogleApiClient != null) {
-            mGoogleApiClient.connect()
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        if (mGoogleApiClient.isConnected) {
-            mGoogleApiClient.disconnect()
-        }
+        serviceIntent = Intent(this, BonoLocationService::class.java)
+        startService(serviceIntent)
     }
 
     override fun onBackPressed() {
@@ -253,6 +222,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
 
         drawer_layout.closeDrawer(GravityCompat.START)
         return true
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopService(serviceIntent)
     }
 
     fun onBtnRegisterClick(btnRegister :View) {
@@ -398,61 +372,5 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, NavigationView.OnN
         {
             Log.e("Exception: %s", e.message)
         }
-    }
-
-    override fun onConnectionSuspended(p0: Int) {
-        Log.i(TAG, "Connection Suspended")
-        mGoogleApiClient.connect()
-    }
-
-    override fun onLocationChanged(location: Location) {
-        updateLocation(location);
-    }
-
-    override fun onConnectionFailed(connectionResult: ConnectionResult) {
-        Log.i(TAG, "Connection failed. Error: " + connectionResult.getErrorCode());
-    }
-
-    override fun onConnected(p0: Bundle?) {
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-        {
-
-            return
-        }
-        startLocationUpdates()
-
-        var fusedLocationProviderClient :
-                FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
-        fusedLocationProviderClient .getLastLocation()
-            .addOnSuccessListener(this, OnSuccessListener<Location>
-            { location ->
-                // Got last known location. In some rare situations this can be null.
-                if (location != null) {
-                    // Logic to handle location object
-                    mLocation = location;
-                }
-            })
-    }
-
-    protected fun startLocationUpdates() {
-
-        // Create the location request
-        mLocationRequest = LocationRequest.create()
-            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-            .setInterval(UPDATE_INTERVAL)
-            .setFastestInterval(FASTEST_INTERVAL)
-        // Request location updates
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-        {
-            return
-        }
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,
-            mLocationRequest, this)
     }
 }

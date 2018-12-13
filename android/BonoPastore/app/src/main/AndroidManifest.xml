@@ -34,12 +34,9 @@
                 android:name="com.google.android.maps.v2.API_KEY"
                 android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/>
 
-        <!-- <meta-data android:name="com.google.android.geo.API_KEY" -->
-        <!-- android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/> -->
         <service
                 android:name=".BonoLocationService"
-                android:enabled="true"
-                android:exported="true">
+                android:enabled="true">
         </service>
     </application>
 

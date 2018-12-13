@@ -1,5 +1,6 @@
 package com.whitehats.bonopastore
 
+import android.Manifest
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
@@ -12,35 +13,64 @@ import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.util.Log
 
-class BonoLocationService : Service() {
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.tasks.OnSuccessListener
+import com.whitehats.bonopastore.main.BonoLocationListener
+
+class BonoLocationService: Service(), GoogleApiClient.ConnectionCallbacks,
+    GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
+
+    private lateinit var mLocation: Location
+
     private var mLocationManager: LocationManager? = null
 
-    private var mLocationListeners = arrayOf(LocationListener(LocationManager.PASSIVE_PROVIDER))
+    private var mLocationRequest: LocationRequest? = null
 
-    private inner class LocationListener(provider: String) : android.location.LocationListener {
-        internal var mLastLocation: Location
+    private var mGoogleApiClient: GoogleApiClient? = null
 
-        init {
-            Log.e(TAG, "LocationListener $provider")
-            mLastLocation = Location(provider)
+    override fun onConnectionSuspended(p0: Int) {
+        Log.i(TAG, "Connection Suspended")
+        mGoogleApiClient?.connect()
+    }
+
+    override fun onConnectionFailed(connectionResult: ConnectionResult) {
+        Log.i(TAG, "Connection failed. Error: " + connectionResult.errorCode)
+    }
+
+    override fun onLocationChanged(location: Location) {
+        Log.e(TAG, "onLocationChanged: $location")
+        this.mLocation = location
+        bonoLocationListener?.locationUpdated(location)
+    }
+
+    override fun onConnected(p0: Bundle?) {
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+
+            return
         }
+        startLocationUpdates()
 
-        override fun onLocationChanged(location: Location) {
-            Log.e(TAG, "onLocationChanged: $location")
-            mLastLocation.set(location)
-        }
-
-        override fun onProviderDisabled(provider: String) {
-            Log.e(TAG, "onProviderDisabled: $provider")
-        }
-
-        override fun onProviderEnabled(provider: String) {
-            Log.e(TAG, "onProviderEnabled: $provider")
-        }
-
-        override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {
-            Log.e(TAG, "onStatusChanged: $provider")
-        }
+        var fusedLocationProviderClient:
+                FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+        fusedLocationProviderClient.lastLocation
+            .addOnSuccessListener(OnSuccessListener<Location>
+            { location ->
+                // Got last known location. In some rare situations this can be null.
+                if (location != null) {
+                    // Logic to handle location object
+                    mLocation = location;
+                }
+            })
     }
 
     override fun onBind(arg0: Intent): IBinder? {
@@ -48,58 +78,43 @@ class BonoLocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        Log.e(TAG, "onStartCommand")
+        Log.d(TAG, "onStartCommand")
         super.onStartCommand(intent, flags, startId)
+
         return Service.START_STICKY
     }
 
     override fun onCreate() {
-
-        Log.e(TAG, "onCreate")
-
+        Log.d(TAG, "onCreate")
         initializeLocationManager()
+        mGoogleApiClient = GoogleApiClient.Builder(this)
+            .addConnectionCallbacks(this)
+            .addOnConnectionFailedListener(this)
+            .addApi(LocationServices.API)
+            .build()
 
-        try {
-            mLocationManager!!.requestLocationUpdates(
-                LocationManager.PASSIVE_PROVIDER,
-                LOCATION_INTERVAL.toLong(),
-                LOCATION_DISTANCE,
-                mLocationListeners[0]
-            )
-        } catch (ex: java.lang.SecurityException) {
-            Log.i(TAG, "fail to request location update, ignore", ex)
-        } catch (ex: IllegalArgumentException) {
-            Log.d(TAG, "network provider does not exist, " + ex.message)
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient?.connect()
         }
+//        try {
+//            startLocationUpdates()
+//        } catch (ex: java.lang.SecurityException) {
+//            Log.i(TAG, "fail to request location update, ignore", ex)
+//        } catch (ex: IllegalArgumentException) {
+//            Log.d(TAG, "network provider does not exist, " + ex.message)
+//        }
     }
 
     override fun onDestroy() {
         Log.e(TAG, "onDestroy")
         super.onDestroy()
-        if (mLocationManager != null) {
-            for (i in mLocationListeners.indices) {
-                try {
-                    if (ActivityCompat.checkSelfPermission(
-                            this,
-                            android.Manifest.permission.ACCESS_FINE_LOCATION
-                        ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                            this,
-                            android.Manifest.permission.ACCESS_COARSE_LOCATION
-                        ) != PackageManager.PERMISSION_GRANTED
-                    ) {
-                        return
-                    }
-                    mLocationManager!!.removeUpdates(mLocationListeners[i])
-                } catch (ex: Exception) {
-                    Log.i(TAG, "fail to remove location listener, ignore", ex)
-                }
-
-            }
+        if (mGoogleApiClient?.isConnected == true) {
+            mGoogleApiClient?.disconnect()
         }
     }
 
     private fun initializeLocationManager() {
-        Log.e(
+        Log.d(
             TAG,
             "initializeLocationManager - LOCATION_INTERVAL: $LOCATION_INTERVAL LOCATION_DISTANCE: $LOCATION_DISTANCE"
         )
@@ -108,9 +123,31 @@ class BonoLocationService : Service() {
         }
     }
 
+    private fun startLocationUpdates() {
+
+        // Create the location request
+        mLocationRequest = LocationRequest.create()
+            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+            .setInterval(UPDATE_INTERVAL)
+            .setFastestInterval(FASTEST_INTERVAL)
+        // Request location updates
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            return
+        }
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,
+            mLocationRequest, this)
+    }
+
     companion object {
-        private val TAG = "MyLocationService"
+        val TAG = javaClass.name
+        var bonoLocationListener: BonoLocationListener? = null
         private val LOCATION_INTERVAL = 1000
         private val LOCATION_DISTANCE = 10f
+        private val UPDATE_INTERVAL = (2 * 1000).toLong()  /* 10 secs */
+        private val FASTEST_INTERVAL: Long = 2 * 1000 /* 2 sec */
     }
 }
