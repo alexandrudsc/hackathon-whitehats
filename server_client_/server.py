@@ -19,7 +19,7 @@ from socket import SO_REUSEADDR, SOCK_STREAM, socket, SOL_SOCKET, AF_INET
 parser = ArgumentParser(description='Multi-threaded TCP Server')
 
 # Add optional argument, with given default values if user gives no arg
-parser.add_argument('-p', '--port', default=9000, type=int, help='Port over which to connect')
+parser.add_argument('-p', '--port', default=8001, type=int, help='Port over which to connect')
 
 # Get the arguments
 args = parser.parse_args()
@@ -35,7 +35,7 @@ thread_lock = Lock()
 # Create a server TCP socket and allow address re-use
 s = socket(AF_INET, SOCK_STREAM)
 s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-s.bind(('localhost', args.port))
+s.bind(('0.0.0.0', args.port))
 
 # Create a list in which threads will be stored in order to be joined later
 threads = []
@@ -63,53 +63,80 @@ class ClientHandler(Thread):
 
         data = self.socket.recv(1024)
         
-        while data.strip() != "exit":
+        v_data = data.split()
+        print("--- From connected user ( " + self.address + ":" + str(self.port) + " ) : " + str(data))
+
+        #while data.strip() != "exit":
             
-            try:
-                if "post" in data:
-                    data = data.replace("post", "")
-                    d = data.split()
-                    
-                    data_input = {"name":d[0],"email":d[1],"token":d[2],"phone":d[3],"friends":{"_id":d[4],"name":d[5]}}
+        try:
+            if (v_data[1] == 'D'):
+                '''
+                {
+                    "title":"my_disaster",
+                    "location":{
+                        "coordinates": ["100", "75"]
+                    },
+                    "notifier":"1234567890"
+                }
+                '''
 
-                    print data_input
-                    r = requests.post(url = "http://192.168.220.14:8080/api/users", headers = headers, data = json.dumps(data_input))
-                    print(r.content, r.status_code, r.reason)
+                data_input = {"title":v_data[2],"location":{"coordinates":[v_data[3],v_data[4]]},"notifier":v_data[0]}
+                print "Disaster -> " + str(data_input)
+                r = requests.post(url = "http://192.168.100.5:8080/api/disasters", headers = headers, data = json.dumps(data_input))
+                print(r.content, r.status_code, r.reason)
 
-
-                elif "delete" in data:
-                    data = data.replace("delete","")
-                    
-                    data_input = data.strip()
-                    
-                    print data_input
-                    
-                    r = requests.delete(url = "http://192.168.220.14:8080/api/user/" + data_input) #, headers = headers, data = data_input)
-                    
-                    print(r.content, r.status_code, r.reason)
-
-
-                    
-                    
-                    
-                else:
-                    # if data is not received break
-                    print("--- From connected user ( " + self.address + ":" + str(self.port) + " ) : " + str(data))
-                    global counter
-                    self.socket.send(self.response_message + str(counter) + "\n")
-                    
-                    #content = urllib2.urlopen("http://www.python.org").read()
-                    #self.socket.send("Content = " + content)
-
-                    # Lock the changing of the shared counter value to prevent erratic multithread changing behavior
-                    with self.lock:
-                        counter += 1
                 
-                data = self.socket.recv(1024)
+            elif (v_data[1] == 'L'):
                 
-            except KeyboardInterrupt:
-                break
+                data_input = {"location":{"coordinates":[v_data[2],v_data[3]]}}
+                print "New location " + str(data_input)
+                r = requests.post(url = "http://192.168.100.5:8080/api/user/" + str(v_data[0]) + "/locations", headers = headers, data = json.dumps(data_input))
+                print(r.content, r.status_code, r.reason)
+   
+            elif "post" in data:
+                data = data.replace("post", "")
+                d = data.split()
+                
+                data_input = {"name":d[0],"email":d[1],"token":d[2],"phone":d[3],"friends":{"_id":d[4],"name":d[5]}}
 
+                print data_input
+                r = requests.post(url = "http://192.168.100.5:8080/api/users", headers = headers, data = json.dumps(data_input))
+                print(r.content, r.status_code, r.reason)
+
+
+            elif "delete" in data:
+                data = data.replace("delete","")
+                
+                data_input = data.strip()
+                
+                print data_input
+                
+                r = requests.delete(url = "http://192.168.100.5:8080/api/user/" + data_input) #, headers = headers, data = data_input)
+                
+                print(r.content, r.status_code, r.reason)
+
+
+                
+                
+                
+            else:
+                # if data is not received break
+                print("--- From connected user ( " + self.address + ":" + str(self.port) + " ) : " + str(data))
+                global counter
+                self.socket.send(self.response_message + str(counter) + "\n")
+                
+                #content = urllib2.urlopen("http://www.python.org").read()
+                #self.socket.send("Content = " + content)
+
+                # Lock the changing of the shared counter value to prevent erratic multithread changing behavior
+                with self.lock:
+                    counter += 1
+            
+            #data = self.socket.recv(1024)
+            
+        except:
+            print("An exception occurred") 
+            
         print("<-- User disconnect ( " + self.address + ":" + str(self.port) + " )")
         self.socket.close()
 
