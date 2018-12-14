@@ -38,13 +38,13 @@ void loop() {
       String str_command = "";
       switch (val) {
         case 25 ... 100:
-          str_command = "1 D inundatie 3";
+          str_command = "1 D inundatie 47.641346 26.243080 3";
           break;
         case 101 ... 499:
-          str_command = "1 D inundatie 6";
+          str_command = "1 D inundatie 47.641346 26.243080 6";
           break;
         case 500 ... 800:
-          str_command = "1 D inundatie 9";
+          str_command = "1 D inundatie 47.641346 26.243080 9";
           break;
         default:
           break;
