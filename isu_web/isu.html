@@ -8,26 +8,52 @@
   <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
    integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
    crossorigin=""></script>
-
+  <!-- <script src="http://leaflet.github.io/Leaflet.label/leaflet.label-src.js">
+  </script>
+  <link rel="stylesheet" href="http://leaflet.github.io/Leaflet.label/leaflet.label.css"/> -->
+   <style>
+   .container {
+       width: 100%;
+       height: 200px;
+       margin: auto;
+       padding: 10px;
+    }
+    .one {
+       width: 75%;
+       height: 550px;
+       float: left;
+    }
+    .two {
+       margin-left: 78%;
+       height: 550px;
+    }
+   </style>
 </head>
-<body>
-  <div id="mapid" style="width:100%;height:550px;"></div>
-</br>
-  <div id="container">
-    <label for="title">Title:</label>
-    <input type="text" id="title" name="title">
-    <label for="latitude">Latitude:</label>
-    <input type="text" id="latitude" name="latitude">
-    <label for="longitude">Longitude:</label>
-    <input type="text" id="longitude" name="longitude">
-    <label for="radius">Radius:</label>
-    <input type="text" id="radius" name="radius", placeholder="meters">
-    <label for="level">Level:</label>
-    <input type="text" id="level" name="level">
-    <!-- <input type="checkbox"><label for="checkbox">Keep me logged in</label> -->
-    <input type="submit" id="send-disaster" value="Send disaster" onclick="sendDisaster">
-    <input type="submit" id="delete-disasters" value="Delete disasters" onclick="deleteDisasters ">
-  </div>
+<body onload="loadDisasters();">
+  <section class="container">
+    <div class="one">
+      <div id="mapid" style="height:550px;"></div>
+    </div>
+    <div class="two">
+      <div id="container">
+        <label for="title">Title:</label><br>
+        <input type="text" id="title" name="title"><br>
+        <label for="latitude">Latitude:</label><br>
+        <input type="text" id="latitude" name="latitude"><br>
+        <label for="longitude">Longitude:</label><br>
+        <input type="text" id="longitude" name="longitude"><br>
+        <label for="radius">Radius:</label><br>
+        <input type="text" id="radius" name="radius", placeholder="meters"><br>
+        <label for="level">Level:</label><br>
+        <input type="text" id="level" name="level"><br><br>
+        <input type="checkbox" id="show-inactive"><label for="checkbox">Show inactive disasters</label><br>
+        <input type="submit" id="send-disaster" value="Send disaster" onclick="sendDisaster">
+        <input type="submit" id="delete-disasters" value="Delete all disasters" onclick="deleteDisasters ">
+      </div>
+    </div>
+  </section>
+  </br>
+
 
 <script type="text/javascript">
   var mymap = L.map('mapid').setView([47.642695, 26.24608], 16);
@@ -37,18 +63,27 @@
     id: 'mapbox.streets',
     accessToken: 'your.mapbox.access.token'
 }).addTo(mymap);
+var myGroup = L.layerGroup().addTo(mymap);
+// var popup = L.popup();
+var marker = L.marker();
 
-var popup = L.popup();
+
+var burl = "http://whitehats.hackathon.osf.global:8006/api/";
+// var burl = "http://192.168.100.5:8080/api/";
 
 function onMapClick(e) {
-  popup
-      .setLatLng(e.latlng)
-      .setContent("You clicked the map at " + e.latlng.toString())
-      .openOn(mymap);
+  marker.setLatLng(e.latlng).addTo(mymap);
   document.getElementById("longitude").value = e.latlng.lng;
   document.getElementById("latitude").value = e.latlng.lat;
 }
 mymap.on('click', onMapClick);
+
+var show_inactive = false;
+
+document.getElementById('show-inactive').onclick = function showInactive() {
+  show_inactive = document.getElementById('show-inactive').checked;
+  loadDisasters();
+}
 
 document.getElementById('send-disaster').onclick = function sendDisaster() {
   var lat = document.getElementById("latitude").value;
@@ -56,19 +91,23 @@ document.getElementById('send-disaster').onclick = function sendDisaster() {
   var rad = document.getElementById("radius").value;
   var lvl = document.getElementById("level").value;
   var title = document.getElementById("title").value;
+  var color = 'black';
+  var fcolor = 'black';
+  if(lvl < 3){
+    color = 'yellow'
+  } else if(lvl < 6){
+    color = 'orange'
+  } else {
+    color = 'red'
+  }
 
   var xhr = new XMLHttpRequest();
-  var url = "http://192.168.100.5:8080/api/disasters/";
+  var url = burl + "disasters/";
   xhr.open("POST", url, true);
   xhr.setRequestHeader("Content-Type", "application/json");
   xhr.onreadystatechange = function () {
       if (xhr.readyState === 4 && xhr.status === 200) {
-          var circle = L.circle([lat, lng], {
-              color: 'red',
-              fillColor: '#f03',
-              fillOpacity: 0.5,
-              radius: rad
-          }).addTo(mymap);
+          loadDisasters();
           var json = JSON.parse(xhr.responseText);
           console.log(json);
       }
@@ -79,19 +118,20 @@ document.getElementById('send-disaster').onclick = function sendDisaster() {
     "location":{
       "coordinates": [lng, lat]
     },
+    "radius":rad,
     "notifier":"ISU",
-    "level": lvl
+    "level":lvl
   });
   xhr.send(data);
 }
 
 document.getElementById('delete-disasters').onclick = function deleteDisasters() {
   var xhr = new XMLHttpRequest();
-  var url = "http://192.168.100.5:8080/api/disasters/";
+  var url = burl + "disasters/";
   xhr.open("DELETE", url, true);
   xhr.onreadystatechange = function () {
       if (xhr.readyState === 4 && xhr.status === 200) {
-        location.reload();
+        loadDisasters();
         var json = JSON.parse(xhr.responseText);
         console.log(json);
       }
@@ -99,6 +139,67 @@ document.getElementById('delete-disasters').onclick = function deleteDisasters()
   xhr.send();
 }
 
+function loadDisasters() {
+  myGroup.clearLayers();
+  var xhr = new XMLHttpRequest();
+  var url = burl + "disasters" + (show_inactive ? "" : "/active");
+  xhr.open("GET", url, true);
+  xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        var json = JSON.parse(xhr.responseText);
+        json.data.forEach(function(i, idx){
+          // console.log(idx);
+          var lat = i.location.coordinates[1];
+          var lng = i.location.coordinates[0];
+          var rad = i.radius;
+          var lvl = i.level;
+          var color;
+          if(!i.active){
+            color = 'gray';
+          } else if(lvl < 3){
+            color = 'yellow'
+          } else if(lvl < 6){
+            color = 'orange'
+          } else {
+            color = 'red'
+          }
+          var circle = L.circle([lat, lng], {
+              color: color,
+              fillColor: color,
+              fillOpacity: 0.5,
+              radius: rad
+          }).addTo(myGroup);
+          var text = L.tooltip({
+              permanent: true,
+              direction: 'center',
+              className: 'text'
+          })
+          .setContent(`x`)
+          // .setContent(`id ${idx}`)
+          .setLatLng([lat, lng])
+          .addTo(myGroup);
+          var el = text.getElement();
+          el.addEventListener('click', function() {
+              // console.log("click");
+              var xhr2 = new XMLHttpRequest();
+              var url2 = burl + `disaster/${i._id}/disable`;
+              xhr2.open("PUT", url2, true);
+              xhr2.onreadystatechange = function () {
+                  if (xhr2.readyState === 4 && xhr2.status === 200) {
+                    loadDisasters();
+                    var json2 = JSON.parse(xhr2.responseText);
+                    console.log(json2);
+                  }
+              };
+              xhr2.send();
+          });
+          el.style.pointerEvents = 'auto';
+        });
+        console.log(json);
+      }
+  };
+  xhr.send();
+}
 </script>
 </body>
 </html>
