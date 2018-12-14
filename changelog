@@ -1,3 +1,19 @@
+v0.4
+===============================================================================
+  - [Embedded] Adding level alert
+  - [Alarm server] Support level alert for notifiable server
+  - [Fix][Android] moved location listener into a separated service
+  - [Feature][Android] use add friends minimal functionality
+  - [Feature][main_server] API for active disasters. Send disaster info 
+  through push notifications
+  - [Feature][ISU] Load disasters stored in DB
+  - [Feature] Checkbox for view/hide inactive disasters
+  - [Feature] Delete disasters one by one
+  - [Feature] Different colors for different level disasters
+  - [Feature][ISU] Use local/global based on GET parameter
+===============================================================================
+
+
 v0.3
 ===============================================================================
   - [New] Isu web page for generating disasters
