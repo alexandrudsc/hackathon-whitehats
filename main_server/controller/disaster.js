@@ -11,6 +11,7 @@ exports.index = function(req, res) {
     }
     //notify("1","1");
     res.json({
+      id: "0",
       status: "success",
       message: "Disasters retrieved successfully",
       data: disasters
@@ -53,13 +54,22 @@ exports.new = function(req, res) {
       });
     }
     var d = disaster;
-    if( d.to_notify === 'public' || d.to_notify === 'public+private' ){
-      var message = `${d.notifier} issued "${d.title}" in your proximity`;
+    var message = `${d.notifier} issued "${d.title}" in your proximity`;
+    if( d.to_notify === 'public' ){
       User.notify_all_in_radius(d.location.coordinates[0],
                                 d.location.coordinates[1],
                                 20000,
-                                message,
+                                { message: message,
+                                  metainfo: d},
                                 true);
+    } else if( d.to_notify === 'public+private' ){
+      User.notify_all_in_radius(d.location.coordinates[0],
+                                d.location.coordinates[1],
+                                20000,
+                                { message: message,
+                                  metainfo: d},
+                                true);
+      User.notify_owners(disaster);
     } else { //disaster comes from an object
       User.notify_owners(disaster);
     }
@@ -263,6 +273,26 @@ exports.in_radius = function(req, res) {
     res.json({
       status: 'success',
       message: `Loading disasters within ${radius} meters from the specified location`,
+      data: disasters
+    });
+  });
+}
+
+exports.index_active = function(req, res) {
+  Disaster.find({
+    active: true,
+    to_notify: "public"
+  }, function(err, disasters) {
+    if (err){
+      res.json({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+    res.json({
+      status: 'success',
+      message: `Loading active disasters`,
       data: disasters
     });
   });

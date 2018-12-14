@@ -20,7 +20,7 @@ exports.index = function(req, res) {
 
 // Handle create user actions
 exports.new = function(req, res) {
-  if( !req.body.phone || req.body.phone.length != 15){
+  if( !req.body.phone ){
     return res.json({
       status: "error",
       message: "Incorrect phone number",
@@ -442,7 +442,7 @@ function notify(phone, msg) {
     }
 
     var message = {
-      data: { msg: msg },
+      data: { msg: JSON.stringify(msg) },
       token: user.token
     }
 
@@ -460,12 +460,20 @@ function notify(phone, msg) {
         });
     }
     catch(er){
-      console.log(`There was an error sending message to ${user.name}(${user._id})`)
+      console.log(`There was an error sending message to ${user.name}(${user._id}) - ${er}`)
     }
   });
 }
 
 exports.notify = notify;
+
+function notify_all_friends(user, msg){
+  user.friends.forEach(function(item, index){
+    notify(item._id, msg);
+  })
+}
+
+exports.notify_all_friends = notify_all_friends;
 
 function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
   User.find({
@@ -492,8 +500,9 @@ function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
     if(notify_friends){
       users.forEach(function(item, index){
         notify(item._id, msg);
-        var message = `${item.name} is caught in a disaster: "${msg}"`;
-        notify_friends(item, message);
+        newmsg = JSON.parse(JSON.stringify(msg));
+        newmsg.message = `${item.name} is caught in a disaster: "${msg.message}"`;
+        notify_all_friends(item, newmsg);
       })
     } else {
       users.forEach(function(item, index){
@@ -504,12 +513,6 @@ function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
 }
 
 exports.notify_all_in_radius = notify_all_in_radius;
-
-function notify_friends(user, msg){
-  user.friends.forEach(function(item, index){
-    notify(item._id, msg);
-  })
-}
 
 function notify_owners(disaster){
   User.find({
@@ -528,7 +531,7 @@ function notify_owners(disaster){
       }
       var msg = `Your object ${disaster.notifier} notified a disaster: ${disaster.title} - ${disaster.description}`;
       users.forEach(function(item, index){
-        notify(item._id, msg);
+        notify(item._id, { message: msg, metainfo: disaster});
       })
   });
 }

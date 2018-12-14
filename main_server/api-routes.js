@@ -49,6 +49,9 @@ router.route('/disasters')
   .post(disaster_controller.new)
   .delete(disaster_controller.delete_all);
 
+router.route('/disasters/active')
+  .get(disaster_controller.index_active);
+
 router.route('/disaster/:mongoId([0-9a-f]{24})')
   .get(disaster_controller.view)
   .put(disaster_controller.update)
