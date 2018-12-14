@@ -26,9 +26,7 @@ import android.widget.EditText
 class FriendsActivity : AppCompatActivity(),
   Response.Listener<JSONObject>,
   Response.ErrorListener {
-
-
-
+    
     private var recyclerView: RecyclerView? = null
     private val adapter: RecyclerView.Adapter<*>? = null
     private var friendsList: MutableList<Friend>? = null

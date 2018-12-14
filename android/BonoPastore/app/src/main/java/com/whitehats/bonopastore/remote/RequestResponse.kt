@@ -18,7 +18,9 @@ import org.json.JSONObject
 class RequestResponse {
 
     companion object {
-        val TAG = "RequestResponse"
+        const val TAG = "RequestResponse"
+        const val RESPONSE_ACTIVE_DISASTERS = "0"
+        const val RESPONSE_FRIENDS = "1"
 
         fun sendJSONRequest(service: Activity, listener: Response.Listener<JSONObject>, errorListener: ErrorListener,
                             json: JSONObject) {
@@ -61,20 +63,18 @@ class RequestResponse {
             queue.add(request)
         }
 
-        fun getDisasters(service: Activity, listener: Response.Listener<String>, errorListener: Response.ErrorListener)
-        {
+        fun getFriends(service: Activity, listener: Response.Listener<JSONObject>,
+                       errorListener: Response.ErrorListener, simNumber: String) {
             // Instantiate the RequestQueue.
             val queue = Volley.newRequestQueue(service)
-            val url = ServerConfig.hostname + ":" + ServerConfig.port + "/" + ServerConfig.API_GET_DISASTERS
-            val request = StringRequest(Request.Method.GET, url,
+            val url = ServerConfig.hostname + ":" + ServerConfig.port + "/" + ServerConfig.API_GET_FRIENDS + "/"+
+               simNumber + "/friends"
+            val request = JsonObjectRequest(Request.Method.GET, url, null,
                 listener, errorListener
             )
             // Add the request to the RequestQueue.
             queue.add(request)
         }
-
-
-        //fun parseResponseDisasters()
 
     }
 }

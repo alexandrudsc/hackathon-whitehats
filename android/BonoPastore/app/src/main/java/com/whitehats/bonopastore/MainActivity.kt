@@ -7,10 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
-import android.os.Build
-import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
+import android.media.MediaPlayer
+import android.os.*
 import android.support.design.widget.NavigationView
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
@@ -25,13 +23,12 @@ import android.view.Menu
 import android.view.MenuItem
 import com.android.volley.Response
 import com.android.volley.VolleyError
+import com.google.android.gms.location.places.ui.PlacePicker
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapFragment
 import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.model.Circle
-import com.google.android.gms.maps.model.CircleOptions
-import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.*
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.iid.FirebaseInstanceId
 import com.google.firebase.messaging.RemoteMessage
@@ -59,13 +56,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
 
     private val DEFAULT_ZOOM: Float = 15F
     private var mLocationPermissionGranted = false
+    private var currMockLocation: LatLng = LatLng(0.0, 0.0)
+    private var mockLocation: Boolean = false
 
     private var user: User = User()
     private var serviceIntent : Intent? = null
 
-    private var meCircle: Circle? = null
+    private var meMarker: Marker? = null
     private var circlesInitialDisasters: MutableMap<String, Circle?> = mutableMapOf<String, Circle?>()
     private var receivedDisasters: MutableMap<String, Circle?> = mutableMapOf<String, Circle?>()
+
+    private var notificationId: Int = 1
+    private var mp: MediaPlayer? = null
 
     override fun showNotification(message: RemoteMessage?) {
         val channel =
@@ -78,14 +80,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
             var jsonStr = JSONObject(message?.data)
             var json = JSONObject(jsonStr.get("msg").toString())
             var message = json.get("message")
+            var is_friend = json.has("is_friend")
+            var is_over = json.has("is_over")
+
             var disaster: Disaster = Disaster.createDisaster(
                 json.getJSONObject("metainfo"))
-            runOnUiThread( object :Runnable{
-                override fun run() {
-                    Log.i(TAG,"runOnUiThread")
-                    drawDisaster(disaster)
-                }
-            })
+            if (!is_over) {
+                runOnUiThread(object : Runnable {
+                    override fun run() {
+                        Log.i(TAG, "runOnUiThread")
+                        drawDisaster(disaster)
+                    }
+                })
+            }
+            else
+            {
+                runOnUiThread( object :Runnable{
+                    override fun run() {
+                        Log.i(TAG,"runOnUiThread")
+                        removeDisaster(disaster)
+                    }
+                })
+            }
 
             var mBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.notify_panel_notification_icon_bg)
@@ -96,14 +112,38 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
                 .setColor(disaster.getColor())
                 .setAutoCancel(true)
 
+
             val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             mNotificationManager.createNotificationChannel(channel)
             val notification = mBuilder.build()
-            mNotificationManager.notify("test",10, notification)
+            mNotificationManager.notify("test", notificationId, notification)
+            notificationId++
 
+            if (is_over) {
+                return;
+            }
+
+            // Vibrate for 1000 milliseconds
             var v :Vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            // Vibrate for 500 milliseconds
-            v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+            v.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE))
+            mp = MediaPlayer.create(this, R.raw.fire_alarm)
+            var duration :Int = 1
+            if (disaster.level < Disaster.MEDIUM) {
+                duration = 1
+            }
+            else if(disaster.level < Disaster.DANGER) {
+                duration = 2
+            }
+            else {
+                duration = 3
+            }
+            mp?.isLooping = false
+            mp?.start()
+            timer(duration * 1000L,1000L).start()
+            if (is_friend)
+            {
+                show_friend_route(disaster)
+            }
         }
         catch (e: Exception)
         {
@@ -112,10 +152,34 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
 
     }
 
+    private fun timer(millisInFuture:Long, countDownInterval:Long):CountDownTimer{
+        return object: CountDownTimer(millisInFuture,countDownInterval)
+        {
+            override fun onTick(millisUntilFinished: Long){
+            }
+
+            override fun onFinish() {
+                if (mp?.isPlaying == true)
+                {
+                    mp?.stop()
+                    mp?.release()
+                }
+            }
+        }
+    }
+
+    private fun show_friend_route(disaster: Disaster) {
+
+    }
+
     override fun updateLocation(location: Location) {
         // Add a marker for the selected place, with an info window
         // showing information about that place.
-        var latLng: LatLng = LatLng(location.latitude, location.longitude)
+        var latLng = LatLng(location.latitude, location.longitude)
+        if (mockLocation)
+        {
+            latLng = LatLng(location.latitude + 1, location.longitude + 1)
+        }
 
         // Position the map's camera at the location of the marker.
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE)
@@ -131,15 +195,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         }
         user.lastLocation = Pair(location.latitude, location.longitude)
         Sender.sendLocationMessage(user)
-        if (meCircle == null)
+        if (meMarker == null)
         {
             mMap?.moveCamera( CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM))
-            meCircle =  mMap?.addCircle(
-                CircleOptions()
-                    .center(latLng)
-                    .radius(100.0)
-                    .zIndex(1F)
-                    .fillColor(0x220000FF))
+            meMarker = mMap?.addMarker(MarkerOptions().title("Me").position(latLng))
+//            meMarker =  mMap?.addCircle(
+//                CircleOptions()
+//                    .center(latLng)
+//                    .radius(100.0)
+//                    .zIndex(1F)
+//                    .fillColor(0x220000FF))
         }
 
     }
@@ -150,7 +215,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         const val channel_name = "firebase"
         const val PERMISSIONS_PHONE_NUMBER = 2
         const val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 3
+
         const val REQUEST_CODE_SELECT_FRIEND = 11
+        const val PLACE_PICKER_REQUEST = 12
+        const val CHANGE_NOTIFY_LEVEL = 13
+
     }
 
     var token = ""
@@ -223,7 +292,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         when (item.itemId) {
-            R.id.action_settings -> return true
+            R.id.action_settings -> {
+                RequestResponse.getFriends(this, this, this, user.simNumber)
+                return true
+            }
+            R.id.action_change_level -> {
+                var intent: Intent = Intent(this, ChangeNotifyLevelActivity::class.java)
+                intent.putExtra("user_id", user.simNumber)
+                startActivityForResult(intent, CHANGE_NOTIFY_LEVEL)
+                return true
+            }
             else -> return super.onOptionsItemSelected(item)
         }
     }
@@ -231,8 +309,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         when (item.itemId) {
-            R.id.nav_camera -> {
-                // Handle the camera action
+            R.id.nav_notifylevel -> {
+
             }
             R.id.nav_gallery -> {
 
@@ -247,7 +325,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
 
             }
             R.id.nav_send -> {
-
+                var builder: PlacePicker.IntentBuilder = PlacePicker.IntentBuilder()
+                startActivityForResult(builder.build(this), PLACE_PICKER_REQUEST)
             }
         }
 
@@ -265,6 +344,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
                     addFriend(friend)
                 }
             }
+            PLACE_PICKER_REQUEST -> {
+                    if (resultCode == RESULT_OK) {
+                        var place = PlacePicker.getPlace(data, this)
+                        this.currMockLocation = LatLng(place.latLng.latitude, place.latLng.longitude)
+                        mockLocation = true
+                    }
+
+            }
+
         }
     }
 
@@ -396,7 +484,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
 
     override fun onResponse(response: JSONObject?) {
         Log.d(TAG, response.toString())
-        if (response?.get("id") == "0") {
+        if (response?.has("id") == false)
+            return
+        if (response?.get("id") == RequestResponse.RESPONSE_ACTIVE_DISASTERS) {
             val disasters = Disaster.parseDisasters(response.getJSONArray("data"))
             for(c: MutableMap.MutableEntry<String,Circle?> in circlesInitialDisasters)
             {
@@ -407,6 +497,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
                 var c: Circle? = drawDisaster(d)
                 circlesInitialDisasters.put(d.id, c)
             }
+        }
+        else if (response?.get("id") == RequestResponse.RESPONSE_FRIENDS)
+        {
+            var intent = Intent(this, FriendsActivity::class.java)
+            var arrayList: ArrayList<Friend> = arrayListOf<Friend>()
+            intent.putParcelableArrayListExtra("FRIENDS", arrayList)
+            startActivity(intent)
         }
     }
 
@@ -426,10 +523,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         {
             if (c.value != null && c.key == d.id)
             {
+                c.value?.isVisible = false
                 c.value?.remove()
                 return
             }
-
+        }
+     for(c: MutableMap.MutableEntry<String,Circle?> in receivedDisasters)
+        {
+            if (c.value != null && c.key == d.id)
+            {
+                c.value?.remove()
+                return
+            }
         }
     }
 

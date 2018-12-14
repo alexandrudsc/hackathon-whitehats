@@ -34,18 +34,25 @@
         <meta-data
                 android:name="com.google.android.maps.v2.API_KEY"
                 android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/>
+        <meta-data
+                android:name="com.google.android.geo.api_key"
+                android:value="AIzaSyBL1mQdaVq5dAgBOzf60GQsuhNwiWiG2_4"/>
 
         <service
                 android:name=".BonoLocationService"
                 android:enabled="true">
         </service>
 
-        <activity
-                android:name=".ScrollingActivity"
-                android:label="@string/title_activity_scrolling"
-                android:theme="@style/AppTheme.NoActionBar">
-        </activity>
         <activity android:name=".FriendsActivity">
+        </activity>
+        <activity android:name=".ChangeNotifyLevelActivity">
+        </activity>
+
+        <activity
+                android:name=".LastLocationActivity"
+                android:taskAffinity=""
+                android:excludeFromRecents="true"
+                android:label="Friend">
         </activity>
     </application>
 
