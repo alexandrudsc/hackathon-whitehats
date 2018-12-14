@@ -82,7 +82,9 @@ class ClientHandler(Thread):
                 if(len(v_data) == 5):
                     data_input = {"title":v_data[2],"location":{"coordinates":[v_data[3],v_data[4]]},"notifier":v_data[0]}
                 else:
-                    data_input = {"title":v_data[2],"location":{"coordinates":[v_data[3],v_data[4]]},"notifier":v_data[0],"level":v_data[5].strip()}
+                    alert_lvl = v_data[5]
+                    print "|" + alert_lvl[0] + "|"
+                    data_input = {"title":v_data[2],"location":{"coordinates":[v_data[3],v_data[4]]},"notifier":v_data[0],"level":alert_lvl[0]}
 
                 print "Disaster -> " + str(data_input)
                 r = requests.post(url = "http://whitehats.hackathon.osf.global:8006/api/disasters", headers = headers, data = json.dumps(data_input))
