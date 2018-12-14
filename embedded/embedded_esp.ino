@@ -33,9 +33,34 @@ void loop() {
 
   if (client.connect(host, port)) //Try to connect to TCP Server
   {
-      char command[] = "TEST!";
+      val = analogRead(analogPin);
+      Serial.println("Valoarea citita sensor = " + String(val)); 
+      String str_command = "";
+      switch (val) {
+        case 25 ... 100:
+          str_command = "1 D inundatie 3";
+          break;
+        case 101 ... 499:
+          str_command = "1 D inundatie 6";
+          break;
+        case 500 ... 800:
+          str_command = "1 D inundatie 9";
+          break;
+        default:
+          break;
+      }
+
+      // Length (with one extra character for the null terminator)
+      int str_len = str_command.length() + 1; 
+       
+      // Prepare the character array (the buffer) 
+      char command[str_len];
+      str_command.toCharArray(command, str_len);
+      //client.write(str_command);
       client.write((uint8_t *)command, sizeof(command));
-      delay(5000); 
+
+
+      delay(1000); 
 
     Serial.println("Command sent ... "); // command is the color or animation sent to the LED controller
   } 
@@ -44,7 +69,5 @@ void loop() {
     Serial.println("connection failed ... ");
   }
 
-  
-  //Serial.println(analogRead(analogPin));
-  delay(1000);
+    delay(4000);
 }
