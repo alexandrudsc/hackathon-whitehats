@@ -1,21 +1,16 @@
 package com.whitehats.bonopastore
 
 import android.app.Activity
-import android.app.Instrumentation
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.database.Cursor
-import android.graphics.Color
-import android.graphics.Color.*
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.provider.ContactsContract
 import android.support.design.widget.NavigationView
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
@@ -28,8 +23,6 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.widget.Toast
 import com.android.volley.Response
 import com.android.volley.VolleyError
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -45,6 +38,7 @@ import com.google.firebase.messaging.RemoteMessage
 import com.whitehats.bonopastore.main.MainView
 import com.whitehats.bonopastore.main.Presenter
 import com.whitehats.bonopastore.main.PresenterImpl
+import com.whitehats.bonopastore.model.Disaster
 import com.whitehats.bonopastore.model.Friend
 import com.whitehats.bonopastore.remote.RequestResponse
 import com.whitehats.bonopastore.remote.ServerConfig
@@ -52,11 +46,13 @@ import com.whitehats.bonopastore.socketcom.Sender
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import org.json.JSONObject
+import java.lang.Exception
 import kotlin.properties.Delegates
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback,
     NavigationView.OnNavigationItemSelectedListener,
     Response.Listener<JSONObject>, Response.ErrorListener, MainView {
+
 
     var presenter: Presenter by Delegates.notNull()
     private var mMap: GoogleMap? = null
@@ -68,28 +64,52 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
     private var serviceIntent : Intent? = null
 
     private var meCircle: Circle? = null
+    private var circlesInitialDisasters: MutableMap<String, Circle?> = mutableMapOf<String, Circle?>()
+    private var receivedDisasters: MutableMap<String, Circle?> = mutableMapOf<String, Circle?>()
 
     override fun showNotification(message: RemoteMessage?) {
-        val channel = NotificationChannel(CHANNEL_ID, channel_name, NotificationManager.IMPORTANCE_HIGH).apply {
+        val channel =
+            NotificationChannel(CHANNEL_ID, channel_name, NotificationManager.IMPORTANCE_HIGH).apply {
             description = "Notification from firebase"
         }
 
-        var mBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.notify_panel_notification_icon_bg)
-            .setContentTitle("Firebase message")
-            .setContentText(message.toString())
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true)
+        try
+        {
+            var jsonStr = JSONObject(message?.data)
+            var json = JSONObject(jsonStr.get("msg").toString())
+            var message = json.get("message")
+            var disaster: Disaster = Disaster.createDisaster(
+                json.getJSONObject("metainfo"))
+            runOnUiThread( object :Runnable{
+                override fun run() {
+                    Log.i(TAG,"runOnUiThread")
+                    drawDisaster(disaster)
+                }
+            })
 
-        val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        mNotificationManager.createNotificationChannel(channel)
-        val notification = mBuilder.build()
-        mNotificationManager.notify("test",10, notification)
+            var mBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.notify_panel_notification_icon_bg)
+                .setContentTitle(disaster.title)
+                .setContentText(message?.toString())
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setColor(disaster.getColor())
+                .setAutoCancel(true)
 
-        var v :Vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        // Vibrate for 500 milliseconds
-        v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+            val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            mNotificationManager.createNotificationChannel(channel)
+            val notification = mBuilder.build()
+            mNotificationManager.notify("test",10, notification)
+
+            var v :Vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            // Vibrate for 500 milliseconds
+            v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+
     }
 
     override fun updateLocation(location: Location) {
@@ -376,6 +396,41 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
 
     override fun onResponse(response: JSONObject?) {
         Log.d(TAG, response.toString())
+        if (response?.get("id") == "0") {
+            val disasters = Disaster.parseDisasters(response.getJSONArray("data"))
+            for(c: MutableMap.MutableEntry<String,Circle?> in circlesInitialDisasters)
+            {
+                if (c.value != null)
+                    c.value?.remove()
+            }
+            for (d: Disaster in disasters!!) {
+                var c: Circle? = drawDisaster(d)
+                circlesInitialDisasters.put(d.id, c)
+            }
+        }
+    }
+
+    private fun drawDisaster(d: Disaster): Circle? {
+        var c: Circle? = mMap?.addCircle(
+            CircleOptions()
+                .center(d.latLng)
+                .radius(d.radius)
+                .zIndex(3F)
+                .fillColor(d.getColor()))
+        receivedDisasters.put(d.id, c)
+        return c;
+    }
+
+    private fun removeDisaster(d: Disaster) {
+        for(c: MutableMap.MutableEntry<String,Circle?> in circlesInitialDisasters)
+        {
+            if (c.value != null && c.key == d.id)
+            {
+                c.value?.remove()
+                return
+            }
+
+        }
     }
 
     override fun onErrorResponse(error: VolleyError?) {
@@ -386,7 +441,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         mMap = googleMap
         RequestResponse.sendGetRequest(this, this, this,
             ServerConfig.API_GET_DISASTERS)
-        updateLocationUI()
     }
 
     /*

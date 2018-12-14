@@ -61,6 +61,19 @@ class RequestResponse {
             queue.add(request)
         }
 
+        fun getDisasters(service: Activity, listener: Response.Listener<String>, errorListener: Response.ErrorListener)
+        {
+            // Instantiate the RequestQueue.
+            val queue = Volley.newRequestQueue(service)
+            val url = ServerConfig.hostname + ":" + ServerConfig.port + "/" + ServerConfig.API_GET_DISASTERS
+            val request = StringRequest(Request.Method.GET, url,
+                listener, errorListener
+            )
+            // Add the request to the RequestQueue.
+            queue.add(request)
+        }
+
+
         //fun parseResponseDisasters()
 
     }
