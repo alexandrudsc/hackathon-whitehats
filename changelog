@@ -1,10 +1,27 @@
+v1.0
+===============================================================================
+[Feature][Android] addded support for last locations of friend
+
+[Feature][android] added sound and remove ceased disaster
+
+[Feature][ISU] Show disasters details at click
+
+[Fix][main_server] Bug for radius calculation and lat/lng DB saving
+
+[Documentation] ;;
+
+[Documentation] ;
+
+[Documentation] Adding test descriptions
+===============================================================================
+
 v0.4
 ===============================================================================
   - [Embedded] Adding level alert
   - [Alarm server] Support level alert for notifiable server
   - [Fix][Android] moved location listener into a separated service
   - [Feature][Android] use add friends minimal functionality
-  - [Feature][main_server] API for active disasters. Send disaster info 
+  - [Feature][main_server] API for active disasters. Send disaster info
   through push notifications
   - [Feature][ISU] Load disasters stored in DB
   - [Feature] Checkbox for view/hide inactive disasters
