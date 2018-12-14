@@ -45,6 +45,7 @@ exports.new = function(req, res) {
   disaster.to_notify = cnt.to_notify ? cnt.to_notify : disaster.to_notify;
   disaster.end_time = cnt.end_time ? cnt.end_time : disaster.end_time;
   disaster.level = cnt.level ? cnt.level : disaster.level;
+  disaster.start_time = Date.now();
 
 
   // save the disaster and check for errors
@@ -111,6 +112,7 @@ exports.update = function(req, res) {
     disaster.to_notify = cnt.to_notify ? cnt.to_notify : disaster.to_notify;
     disaster.end_time = cnt.end_time ? cnt.end_time : disaster.end_time;
     disaster.level = cnt.level ? cnt.level : disaster.level;
+    disaster.start_time = Date.now();
 
     disaster.save(function(err) {
       if (err) {
@@ -194,6 +196,7 @@ exports.disable = function(req, res) {
     }
     disaster.active = false;
     d = disaster;
+    d.end_time = Date.now();
 
     disaster.save(function(err) {
       if (err) {
@@ -209,7 +212,7 @@ exports.disable = function(req, res) {
       res.json({
         status: 'success',
         message: 'Disaster disabled!',
-        data: disaster
+        data: d
       });
     });
   });
@@ -300,6 +303,7 @@ exports.index_active = function(req, res) {
       return;
     }
     res.json({
+      id: "0",
       status: 'success',
       message: `Loading active disasters`,
       data: disasters

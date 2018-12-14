@@ -245,6 +245,7 @@ exports.get_locations = function(req, res) {
       return;
     }
     res.json({
+      id: "2",
       status: 'success',
       message: 'Loading locations...',
       data: l.last_locations
@@ -564,7 +565,7 @@ function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
           return;
         }
         msg.fmessage = msg.fmessage.replace("%namehere%", item.name);
-        notify_all_friends(item, { is_friend: true, message: msg.fmessage, metainfo: msg.metainfo });
+        notify_all_friends(item, { is_friend: `item._id`, message: msg.fmessage, metainfo: msg.metainfo });
       });
     });
   }

@@ -42,7 +42,7 @@
         <input type="text" id="latitude" name="latitude"><br>
         <label for="longitude">Longitude:</label><br>
         <input type="text" id="longitude" name="longitude"><br>
-        <label for="radius">Radius:</label><br>
+        <label for="radius">Radius(meters):</label><br>
         <input type="text" id="radius" name="radius", placeholder="meters"><br>
         <label for="level">Level:</label><br>
         <input type="text" id="level" name="level"><br><br>
@@ -64,7 +64,7 @@
     accessToken: 'your.mapbox.access.token'
 }).addTo(mymap);
 var myGroup = L.layerGroup().addTo(mymap);
-// var popup = L.popup();
+var popup = L.popup();
 var marker = L.marker();
 
 var burl;
@@ -83,7 +83,7 @@ function onMapClick(e) {
 }
 mymap.on('click', onMapClick);
 
-var show_inactive = false;
+var show_inactive = document.getElementById('show-inactive').checked;
 
 document.getElementById('show-inactive').onclick = function showInactive() {
   show_inactive = document.getElementById('show-inactive').checked;
@@ -121,7 +121,7 @@ document.getElementById('send-disaster').onclick = function sendDisaster() {
   {
     "title": title,
     "location":{
-      "coordinates": [lng, lat]
+      "coordinates": [lat, lng]
     },
     "radius":rad,
     "notifier":"ISU",
@@ -173,7 +173,9 @@ function loadDisasters() {
               fillColor: color,
               fillOpacity: 0.5,
               radius: rad
-          }).addTo(myGroup);
+          }).addTo(myGroup).bindPopup(`<dl><dt>${i.title}</dt>
+            <dt>started at ${i.start_time}</dt>` +
+            (i.active ? `` : `<dt>stopped at ${i.end_time}</dt>`));
           var text = L.tooltip({
               permanent: true,
               direction: 'center',
@@ -184,6 +186,7 @@ function loadDisasters() {
           .setLatLng([lat, lng])
           .addTo(myGroup);
           var el = text.getElement();
+          var el2 = circle.getElement();
           el.addEventListener('click', function() {
               // console.log("click");
               var xhr2 = new XMLHttpRequest();
@@ -199,6 +202,14 @@ function loadDisasters() {
               xhr2.send();
           });
           el.style.pointerEvents = 'auto';
+          el2.addEventListener('click', function() {
+            console.log('test');
+            popup = L.popup()
+              .setLatLng([lat, lng])
+              .setContent("test")
+              .openOn(mymap);
+          });
+          el2.style.pointerEvents = 'auto';
         });
         console.log(json);
       }
