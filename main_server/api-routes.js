@@ -44,6 +44,9 @@ router.route('/user/:phone/locations')
   .get(user_controller.get_locations)
   .post(user_controller.add_location);
 
+router.route('/user/:phone/notify_level')
+  .post(user_controller.change_notify_level);
+
 router.route('/disasters')
   .get(disaster_controller.index)
   .post(disaster_controller.new)

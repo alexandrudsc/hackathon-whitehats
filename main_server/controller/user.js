@@ -28,6 +28,7 @@ exports.new = function(req, res) {
   }
   var user = new User();
   user.name = req.body.name ? req.body.name : user.name;
+  user.notify_level = req.body.notify_level ? req.body.notify_level : user.notify_level;
   user.email = req.body.email;
   user.token = req.body.token;
   user._id = req.body.phone;
@@ -104,6 +105,7 @@ exports.update = function (req, res) {
         }
 
         user.name = req.body.name ? req.body.name : user.name;
+        user.notify_level = req.body.notify_level ? req.body.notify_level : user.notify_level;
         user.email = req.body.email;
         user.token = req.body.token;
         //user._id = req.body.phone ? req.body.phone : user._id;
@@ -180,6 +182,7 @@ exports.get_friends = function(req, res) {
       return;
     }
     res.json({
+      id: '1',
       status: 'success',
       message: 'User friends loading..',
       data: friends
@@ -293,6 +296,50 @@ exports.add_location = function (req, res) {
         status: 'success',
         message: 'Location added',
         data: ll
+      });
+    });
+  });
+};
+
+exports.change_notify_level = function (req, res) {
+  User.findById(req.params.phone, 'notify_level', function (err, nl) {
+    if (err){
+      res.send({
+        status: 'error',
+        message: err
+      });
+      return;
+    }
+
+    if( !nl ){
+      res.json({
+        status: 'error',
+        message: 'User not found'
+      })
+      return;
+    }
+
+    if(req.body.notify_level){
+      nl.notify_level = req.body.notify_level;
+    }
+    else {
+      res.json({
+        status: 'error',
+        message: 'Notify level not given',
+        data: req.body
+      })
+      return;
+    }
+
+    nl.save(function (err) {
+      if (err){
+        res.json(err);
+        return;
+      }
+      res.json({
+        status: 'success',
+        message: 'Notify level changed',
+        data: nl
       });
     });
   });
@@ -499,6 +546,9 @@ function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
     // return;
     if(notify_friends){
       users.forEach(function(item, index){
+        if(item.notify_level > msg.metainfo.level){
+          return;
+        }
         notify(item._id, msg);
         newmsg = JSON.parse(JSON.stringify(msg));
         newmsg.message = `${item.name} is caught in a disaster: "${msg.message}"`;
@@ -506,6 +556,9 @@ function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
       })
     } else {
       users.forEach(function(item, index){
+        if(item.notify_level > msg.metainfo.level){
+          return;
+        }
         notify(item._id, msg)
       })
     }
@@ -531,6 +584,9 @@ function notify_owners(disaster){
       }
       var msg = `Your object ${disaster.notifier} notified a disaster: ${disaster.title} - ${disaster.description}`;
       users.forEach(function(item, index){
+        if(item.notify_level > disaster.level){
+          return;
+        }
         notify(item._id, { message: msg, metainfo: disaster});
       })
   });

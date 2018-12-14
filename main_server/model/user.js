@@ -45,6 +45,10 @@ var user_schema = mongoose.Schema({
   }],
   last_locations: {
     type: [point_schema_time]
+  },
+  notify_level: {
+    type: Number,
+    default: 1
   }
 });
 
