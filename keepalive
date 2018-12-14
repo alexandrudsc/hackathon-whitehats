@@ -11,7 +11,7 @@ smtp.login("whitehatsosf@gmail.com","6caifrumosi")
 filename = sys.argv[1]
 while True:
     #kill pid witch using port 9000
-    p = Popen("fuser -k 9000/tcp", shell=True)
+    p = Popen("fuser -k 8001/tcp", shell=True)
     p.wait()
     #Send the mail
     msg = filename + " is starting. Please check"
