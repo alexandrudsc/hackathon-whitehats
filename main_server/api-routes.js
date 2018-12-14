@@ -1,5 +1,11 @@
 // Initialize express router
 let router = require('express').Router();
+var path = require('path');
+
+// viewed at http://localhost:8080
+// app.get('/', function(req, res) {
+// });
+
 
 // Set default API response
 router.get('/', function (req, res) {
@@ -12,6 +18,11 @@ router.get('/', function (req, res) {
 // Import contact controller
 var user_controller = require('./controller/user');
 var disaster_controller = require('./controller/disaster');
+
+router.route('/isu')
+  .get(function(req, res){
+    res.sendFile(path.join(__dirname + '/../isu_web/isu.html'))
+  });
 
 // Contact routes
 router.route('/users')

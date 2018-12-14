@@ -33,7 +33,9 @@ exports.new = function(req, res) {
   var disaster = new Disaster();
   //required attributes
   disaster.title = cnt.title;
-  disaster.location = cnt.location;
+  disaster.location = {
+      coordinates: [cnt.location.coordinates[1], cnt.location.coordinates[0]]
+  };
   disaster.notifier = cnt.notifier;
 
   //optional attributes
@@ -55,11 +57,13 @@ exports.new = function(req, res) {
     }
     var d = disaster;
     var message = `${d.notifier} issued "${d.title}" in your proximity`;
+    var fmessage = `%namehere% is caught in a "${d.title}" disaster`;
     if( d.to_notify === 'public' ){
       User.notify_all_in_radius(d.location.coordinates[0],
                                 d.location.coordinates[1],
                                 20000,
                                 { message: message,
+                                  fmessage: fmessage,
                                   metainfo: d},
                                 true);
     } else if( d.to_notify === 'public+private' ){
@@ -189,6 +193,7 @@ exports.disable = function(req, res) {
       return;
     }
     disaster.active = false;
+    d = disaster;
 
     disaster.save(function(err) {
       if (err) {
@@ -196,6 +201,10 @@ exports.disable = function(req, res) {
           status: "error",
           message: err,
         });
+      }
+      if( d.to_notify === 'public' ){
+        User.notify_all_users({ message: `${d.title} ceased`,
+                                metainfo: d});
       }
       res.json({
         status: 'success',

@@ -272,7 +272,7 @@ exports.add_location = function (req, res) {
 
     if(req.body.location){
       ll.last_locations.unshift({
-        coordinates: req.body.location.coordinates
+        coordinates: [req.body.location.coordinates[1], req.body.location.coordinates[0]]
       });
       var maxl = 5;
       if(ll.last_locations.length > maxl){
@@ -522,11 +522,56 @@ function notify_all_friends(user, msg){
 
 exports.notify_all_friends = notify_all_friends;
 
+function notify_all_users(msg){
+  User.find({}, function(err, users) {
+      if (err){
+        console.log({
+          status: 'error',
+          message: err
+        });
+        return;
+      }
+      users.forEach(function(item, index){
+        notify(item._id, { is_over: true, message: msg.message, metainfo: msg.metainfo });
+      })
+  });
+}
+
+exports.notify_all_users = notify_all_users;
+
 function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
+  if(notify_friends){
+    console.log(`[${lng}, ${lat}], ${Number(msg.metainfo.radius)}`);
+    User.find({
+      last_locations: {
+        $geoWithin: {
+          $centerSphere: [[lng, lat], Number(msg.metainfo.radius) / 63781300]
+        }
+      }
+    }, function(err, users) {
+      if (err){
+        console.log({
+          status: 'error',
+          message: err
+        });
+        return;
+      }
+      console.log('test');
+      // console.log(users);
+      users.forEach(function(item, index){
+        console.log(item.last_locations);
+        if(item.notify_level > msg.metainfo.level){
+          return;
+        }
+        msg.fmessage = msg.fmessage.replace("%namehere%", item.name);
+        notify_all_friends(item, { is_friend: true, message: msg.fmessage, metainfo: msg.metainfo });
+      });
+    });
+  }
   User.find({
     last_locations: {
       $geoWithin: {
-        $centerSphere: [[lng, lat], rad / 6378.13]
+        $centerSphere: [[lng, lat], rad / 63781300]
       }
     }
   }, function(err, users) {
@@ -537,31 +582,12 @@ function notify_all_in_radius(lng, lat, rad, msg, notify_friends = false) {
       });
       return;
     }
-    // console.log({
-    //   status: 'success',
-    //   message: `Loading ${users.length} users within ${rad} meters from the specified location`,
-    //   data: users
-    // });
-    // console.log(users);
-    // return;
-    if(notify_friends){
-      users.forEach(function(item, index){
-        if(item.notify_level > msg.metainfo.level){
-          return;
-        }
-        notify(item._id, msg);
-        newmsg = JSON.parse(JSON.stringify(msg));
-        newmsg.message = `${item.name} is caught in a disaster: "${msg.message}"`;
-        notify_all_friends(item, newmsg);
-      })
-    } else {
-      users.forEach(function(item, index){
-        if(item.notify_level > msg.metainfo.level){
-          return;
-        }
-        notify(item._id, msg)
-      })
-    }
+    users.forEach(function(item, index){
+      if(item.notify_level > msg.metainfo.level){
+        return;
+      }
+      notify(item._id, { message: msg.message, metainfo: msg.metainfo });
+    })
   });
 }
 
