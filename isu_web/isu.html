@@ -67,9 +67,14 @@ var myGroup = L.layerGroup().addTo(mymap);
 // var popup = L.popup();
 var marker = L.marker();
 
-
-var burl = "http://whitehats.hackathon.osf.global:8006/api/";
-// var burl = "http://192.168.100.5:8080/api/";
+var burl;
+var my_url = new URL(document.location);
+var c = my_url.searchParams.has("global");
+if(c){
+  burl = "http://whitehats.hackathon.osf.global:8006/api/";
+} else {
+  burl = "http://192.168.100.5:8080/api/";
+}
 
 function onMapClick(e) {
   marker.setLatLng(e.latlng).addTo(mymap);
