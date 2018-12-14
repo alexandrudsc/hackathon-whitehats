@@ -79,7 +79,7 @@ class ClientHandler(Thread):
                     "notifier":"1234567890"
                 }
                 '''
-                if(v_data.size() == 5):
+                if(len(v_data) == 5):
                     data_input = {"title":v_data[2],"location":{"coordinates":[v_data[3],v_data[4]]},"notifier":v_data[0]}
                 else:
                     data_input = {"title":v_data[2],"location":{"coordinates":[v_data[3],v_data[4]]},"notifier":v_data[0],"level":v_data[5]}
