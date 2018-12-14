@@ -82,7 +82,7 @@ class ClientHandler(Thread):
 
                 data_input = {"title":v_data[2],"location":{"coordinates":[v_data[3],v_data[4]]},"notifier":v_data[0]}
                 print "Disaster -> " + str(data_input)
-                r = requests.post(url = "localhost:8006/api/disasters", headers = headers, data = json.dumps(data_input))
+                r = requests.post(url = "whitehats.hackathon.osf.global:8006/api/disasters", headers = headers, data = json.dumps(data_input))
                 print(r.content, r.status_code, r.reason)
 
                 
@@ -90,7 +90,7 @@ class ClientHandler(Thread):
                 
                 data_input = {"location":{"coordinates":[v_data[2],v_data[3]]}}
                 print "New location " + str(data_input)
-                r = requests.post(url = "localhost:8006/api/user/" + str(v_data[0]) + "/locations", headers = headers, data = json.dumps(data_input))
+                r = requests.post(url = "whitehats.hackathon.osf.global:8006/api/user/" + str(v_data[0]) + "/locations", headers = headers, data = json.dumps(data_input))
                 print(r.content, r.status_code, r.reason)
    
             elif "post" in data:
@@ -100,7 +100,7 @@ class ClientHandler(Thread):
                 data_input = {"name":d[0],"email":d[1],"token":d[2],"phone":d[3],"friends":{"_id":d[4],"name":d[5]}}
 
                 print data_input
-                r = requests.post(url = "localhost:8006/api/users", headers = headers, data = json.dumps(data_input))
+                r = requests.post(url = "whitehats.hackathon.osf.global:8006/api/users", headers = headers, data = json.dumps(data_input))
                 print(r.content, r.status_code, r.reason)
 
 
@@ -111,7 +111,7 @@ class ClientHandler(Thread):
                 
                 print data_input
                 
-                r = requests.delete(url = "localhost:8006/api/user/" + data_input) #, headers = headers, data = data_input)
+                r = requests.delete(url = "whitehats.hackathon.osf.global:8006/api/user/" + data_input) #, headers = headers, data = data_input)
                 
                 print(r.content, r.status_code, r.reason)
 
