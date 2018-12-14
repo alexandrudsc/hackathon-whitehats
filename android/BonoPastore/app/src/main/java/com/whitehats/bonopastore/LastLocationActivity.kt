@@ -3,32 +3,31 @@ package com.whitehats.bonopastore
 import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.view.View
+import com.google.android.gms.maps.*
 
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
+import java.io.Serializable
 
 
 class LastLocationActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
-    var lats: MutableList<Double> = mutableListOf<Double>()
-    var longs: MutableList<Double> = mutableListOf<Double>()
+    var lats: ArrayList<Double> = arrayListOf<Double>()
+    var longs: ArrayList<Double> = arrayListOf<Double>()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_last_location)
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        val mapFragment = supportFragmentManager
-            .findFragmentById(R.id.map) as SupportMapFragment
+        var mapFragment: MapFragment  = fragmentManager.findFragmentById(R.id.map_last_locations) as MapFragment
         mapFragment.getMapAsync(this)
-        lats.addAll(intent.getDoubleArrayExtra("lats").toTypedArray())
-        longs.addAll(intent.getDoubleArrayExtra("longs").toTypedArray())
+
+        lats.addAll(intent.getSerializableExtra("lats") as ArrayList<Double>)
+        longs.addAll(intent.getSerializableExtra("longs") as ArrayList<Double>)
     }
 
     /**
@@ -46,16 +45,13 @@ class LastLocationActivity : AppCompatActivity(), OnMapReadyCallback {
         options.color(Color.RED)
         options.width(5f)
 
+        var latLng = LatLng (0.0,0.0)
         for (i in lats.indices) {
-            var latLng = LatLng (lats[i], longs[i])
+            latLng = LatLng (lats[i], longs[i])
             options.add(latLng)
+            mMap.addMarker(MarkerOptions().position(latLng))
         }
 
-        val line = mMap.addPolyline(options)
-
-        // Add a marker in Sydney and move the camera
-        val sydney = LatLng(-34.0, 151.0)
-        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
     }
 }

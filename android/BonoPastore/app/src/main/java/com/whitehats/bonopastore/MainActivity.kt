@@ -42,6 +42,7 @@ import com.whitehats.bonopastore.remote.ServerConfig
 import com.whitehats.bonopastore.socketcom.Sender
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
+import org.json.JSONArray
 import org.json.JSONObject
 import java.lang.Exception
 import kotlin.properties.Delegates
@@ -142,7 +143,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
             timer(duration * 1000L,1000L).start()
             if (is_friend)
             {
-                show_friend_route(disaster)
+                val id = json.getString("is_friend")
+                show_friend_route(id)
             }
         }
         catch (e: Exception)
@@ -168,8 +170,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         }
     }
 
-    private fun show_friend_route(disaster: Disaster) {
-
+    private fun show_friend_route(id: String) {
+        var url = ServerConfig.API_GET_LAST_LOCATIONS + "/" + id + "/locations"
+        RequestResponse.sendGetRequest(this, this, this, url)
     }
 
     override fun updateLocation(location: Location) {
@@ -503,6 +506,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
             var intent = Intent(this, FriendsActivity::class.java)
             var arrayList: ArrayList<Friend> = arrayListOf<Friend>()
             intent.putParcelableArrayListExtra("FRIENDS", arrayList)
+            startActivity(intent)
+        }
+        else if (response?.get("id") == RequestResponse.RESPONSE_LOCATIONS) {
+            var intent = Intent(this, LastLocationActivity::class.java)
+            var lats: ArrayList<Double> = arrayListOf<Double>()
+            var longs: ArrayList<Double> = arrayListOf<Double>()
+            var jsonArrayLoc = response.getJSONArray("data")
+
+            for (i in 0..(jsonArrayLoc!!.length() - 1)) {
+                val jsonObj= jsonArrayLoc.getJSONObject(i)
+                var coords: JSONArray = jsonObj.getJSONArray("coordinates")
+                val longitude: Double = coords[0] as Double
+                val latitude: Double = coords[1] as Double
+                lats.add(latitude)
+                longs.add(longitude)
+            }
+
+            intent.putExtra("lats", lats)
+            intent.putExtra("longs", longs)
             startActivity(intent)
         }
     }

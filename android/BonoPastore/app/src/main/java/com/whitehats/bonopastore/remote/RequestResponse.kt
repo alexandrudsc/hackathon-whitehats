@@ -21,6 +21,7 @@ class RequestResponse {
         const val TAG = "RequestResponse"
         const val RESPONSE_ACTIVE_DISASTERS = "0"
         const val RESPONSE_FRIENDS = "1"
+        const val RESPONSE_LOCATIONS = "2"
 
         fun sendJSONRequest(service: Activity, listener: Response.Listener<JSONObject>, errorListener: ErrorListener,
                             json: JSONObject) {
@@ -37,8 +38,9 @@ class RequestResponse {
         }
 
         fun sendJSONRequest(service: Activity, listener: Response.Listener<JSONObject>, errorListener: ErrorListener,
-                            json: JSONObject, url: String) {
+                            json: JSONObject?, url: String) {
             // Instantiate the RequestQueue.
+            Log.d(TAG, url)
             val queue = Volley.newRequestQueue(service)
 
             val jsonObjectRequest = JsonObjectRequest(Request.Method.POST, url, json,
